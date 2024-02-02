@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import styles from './Space.module.css'
-import { SPACE_ZOOM_RATE } from '../../constants'
+import { SPACE_ZOOM_RATE, PAN_SLOW_THRESH } from '@/app/constants'
+import { clamp } from '@/app/utils'
 
 const Space = () => {
   const mouseTarget = useRef<HTMLDivElement>(null)
@@ -11,14 +12,43 @@ const Space = () => {
   const [mouseMove, setMouseMove] = useState({ x: 0, y: 0 })
   const [drag, setDrag] = useState(false)
 
-  const wheelZoomHandler = (e: WheelEvent) => {
+  const wheelHandler = (e: WheelEvent) => {
+    // some browsers not pixel
     let d = e.deltaY
     if (e.deltaMode) {
       if (e.deltaMode == 1) d *= 40
       else d *= 800
     }
-    const factor = 1 - d / SPACE_ZOOM_RATE
-    setZoom((cz) => cz * factor)
+
+    // zoom
+    if (e.ctrlKey) {
+      let factor = 1
+      if (Math.abs(e.deltaY) >= 100) {
+        // wheel + ctrl
+        // ASSUMES pixel delta >= 100
+        factor = 1 - e.deltaY / SPACE_ZOOM_RATE
+      } else {
+        // trackpad pinch zoom
+        factor = 1 - e.deltaY / 100.0
+      }
+      setZoom((cz) => clamp(cz * factor, 0.5, 3))
+    }
+
+    // pan
+    else {
+      // adjust for scroll wheel too fast
+      const dxslow =
+        (Math.sqrt(Math.abs(e.deltaX) - (PAN_SLOW_THRESH - 1)) +
+          PAN_SLOW_THRESH -
+          1) *
+          (e.deltaX < 0 ? -1 : 1) || e.deltaX
+      const dyslow =
+        (Math.sqrt(Math.abs(e.deltaY) - (PAN_SLOW_THRESH - 1)) +
+          PAN_SLOW_THRESH -
+          1) *
+          (e.deltaY < 0 ? -1 : 1) || e.deltaY
+      setTranslate(({ x, y }) => ({ x: x - dxslow, y: y - dyslow }))
+    }
 
     e.stopPropagation()
     e.preventDefault()
@@ -47,7 +77,7 @@ const Space = () => {
     // bind event listeners
     const c_mouseTarget = mouseTarget.current
 
-    c_mouseTarget?.addEventListener('wheel', wheelZoomHandler, {
+    c_mouseTarget?.addEventListener('wheel', wheelHandler, {
       passive: false,
     })
     window.addEventListener('mousemove', mouseMoveHandler, {
@@ -58,7 +88,7 @@ const Space = () => {
 
     //// unmount
     return () => {
-      c_mouseTarget?.removeEventListener('wheel', wheelZoomHandler)
+      c_mouseTarget?.removeEventListener('wheel', wheelHandler)
       window.removeEventListener('mousemove', mouseMoveHandler)
     }
   }, [])
