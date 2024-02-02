@@ -1,10 +1,14 @@
-import TestComp from '../components/testcomp'
+import Space from '../components/Space/Space'
+import styles from './test.module.css'
 
 const testpage = () => {
   return (
     <>
-      <p>this a test page</p>
-      <TestComp></TestComp>
+      <main
+        className={`${styles['test-container']} flex border-8 border-solid border-black`}
+      >
+        <Space></Space>
+      </main>
     </>
   )
 }

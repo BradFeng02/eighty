@@ -3,11 +3,17 @@
 @tailwind utilities;
 
 :root {
-  --sys-font: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  --sys-font: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif,
+    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
 }
 
 body {
   font-family: var(--sys-font);
+}
+
+body.nodrag {
+  pointer-events: none;
+  user-select: none;
 }
 
 @layer utilities {

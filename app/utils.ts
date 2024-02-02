@@ -1,6 +1,11 @@
 import { Atkinson_Hyperlegible } from 'next/font/google'
 
-// usage: <className={AKHyper.className}>
+export type Point2 = {
+  x: number
+  y: number
+}
+
+// usage: <className={AKHyper.className}
 export const AKHyper = Atkinson_Hyperlegible({
   weight: ['400', '700'],
   style: ['normal', 'italic'],
