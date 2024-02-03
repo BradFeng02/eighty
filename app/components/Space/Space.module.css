@@ -1,7 +1,8 @@
 .checker {
   height: 100%;
   width: 100%;
-  background: conic-gradient(
+  background-color: wheat;
+  /* background: conic-gradient(
     #dcd1ad 90deg,
     #77004f 90deg 180deg,
     #dcd1ad 180deg 270deg,
@@ -9,5 +10,5 @@
   );
   background-repeat: repeat;
   background-size: 150px 150px;
-  background-position: top left;
+  background-position: top left; */
 }

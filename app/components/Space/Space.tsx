@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import styles from './Space.module.css'
-import { SPACE_ZOOM_RATE, PAN_SLOW_THRESH } from '@/app/constants'
+import { SPACE_ZOOM_RATE, PAN_SLOW, WHEEL_PX_THRESH } from '@/app/constants'
 import { clamp } from '@/app/utils'
 
 const Space = () => {
@@ -11,51 +11,52 @@ const Space = () => {
   const [zoom, setZoom] = useState(1)
   const [mouseMove, setMouseMove] = useState({ x: 0, y: 0 })
   const [drag, setDrag] = useState(false)
-  const [panDiff, setPanDiff] = useState([0, 0, 0]) // dx, dy, diff
+  const [smooth, setSmooth] = useState(false)
 
   const wheelHandler = (e: WheelEvent) => {
     // some browsers not pixel
-    let d = e.deltaY
+    let dx = e.deltaX
+    let dy = e.deltaY
     if (e.deltaMode) {
-      if (e.deltaMode == 1) d *= 40
-      else d *= 800
+      if (e.deltaMode == 1) {
+        dx *= 40
+        dy *= 40
+      } else {
+        dx *= 800
+        dy *= 800
+      }
     }
+    const magdx = Math.abs(dx)
+    const magdy = Math.abs(dy)
+
+    // smooth if one axis is wheel scroll, other 0
+    const wheelSmooth =
+      (magdx >= WHEEL_PX_THRESH && magdy === 0) ||
+      (magdy >= WHEEL_PX_THRESH && magdx === 0)
+    setSmooth(wheelSmooth)
 
     // zoom
     if (e.ctrlKey) {
       let factor = 1
-      if (Math.abs(e.deltaY) >= 100) {
+      if (magdy >= WHEEL_PX_THRESH) {
         // wheel + ctrl
-        // ASSUMES pixel delta >= 100
-        factor = 1 - e.deltaY / SPACE_ZOOM_RATE
+        // ASSUMES pixel delta >= WHEEL_PX_THRESH
+        factor = 1 - dy / SPACE_ZOOM_RATE
       } else {
         // trackpad pinch zoom
-        factor = 1 - e.deltaY / 100.0
+        factor = 1 - dy / 100.0
       }
-      setZoom((cz) => clamp(cz * factor, 0.5, 3))
+      setZoom((z) => clamp(z * factor, 0.5, 3))
     }
 
     // pan
     else {
       // adjust for scroll wheel too fast
-      const dxslow =
-        (Math.sqrt(Math.abs(e.deltaX) - (PAN_SLOW_THRESH - 1)) +
-          PAN_SLOW_THRESH -
-          1) *
-          (e.deltaX < 0 ? -1 : 1) || e.deltaX
-      const dyslow =
-        (Math.sqrt(Math.abs(e.deltaY) - (PAN_SLOW_THRESH - 1)) +
-          PAN_SLOW_THRESH -
-          1) *
-          (e.deltaY < 0 ? -1 : 1) || e.deltaY
-      setTranslate(({ x, y }) => ({ x: x - dxslow, y: y - dyslow }))
+      setTranslate(({ x, y }) => ({
+        x: x - (wheelSmooth ? PAN_SLOW * Math.sign(dx) : dx),
+        y: y - (wheelSmooth ? PAN_SLOW * Math.sign(dy) : dy),
+      }))
     }
-
-    setPanDiff(([magx, magy, _]) => [
-      Math.abs(e.deltaX),
-      Math.abs(e.deltaY),
-      Math.abs(Math.abs(e.deltaX) - magx) + Math.abs(Math.abs(e.deltaY) - magy),
-    ])
 
     e.stopPropagation()
     e.preventDefault()
@@ -64,7 +65,10 @@ const Space = () => {
   const mouseMoveHandler = (e: MouseEvent) => {
     if (e.buttons === 1)
       setMouseMove(({ x, y }) => ({ x: x + e.movementX, y: y + e.movementY }))
-    else if (e.buttons === 0) setDrag(false) // mouse up
+    else if (e.buttons === 0) {
+      // mouse up
+      setDrag(false)
+    }
   }
 
   // mouse drag
@@ -117,14 +121,14 @@ const Space = () => {
           height: '250px',
           scale: zoom,
           translate: `${translate.x}px ${translate.y}px`,
-          transitionProperty:
-            !drag &&
-            (panDiff[2] === 0 || (panDiff[2] >= 100 && panDiff[2] % 10 === 0))
-              ? 'scale, translate'
-              : 'none',
-          transitionDuration: panDiff[2] === 0 ? '200ms' : '100ms',
+          transitionProperty: !drag && smooth ? 'scale, translate' : 'none',
+          transitionDuration: '150ms',
         }}
-      ></div>
+      >
+        <p>test stuff {`${smooth}`}</p>
+        <textarea>edit me?</textarea>
+        <button>press me.</button>
+      </div>
     </div>
   )
 }
