@@ -11,6 +11,7 @@ const Space = () => {
   const [zoom, setZoom] = useState(1)
   const [mouseMove, setMouseMove] = useState({ x: 0, y: 0 })
   const [drag, setDrag] = useState(false)
+  const [panDiff, setPanDiff] = useState([0, 0, 0]) // dx, dy, diff
 
   const wheelHandler = (e: WheelEvent) => {
     // some browsers not pixel
@@ -49,6 +50,12 @@ const Space = () => {
           (e.deltaY < 0 ? -1 : 1) || e.deltaY
       setTranslate(({ x, y }) => ({ x: x - dxslow, y: y - dyslow }))
     }
+
+    setPanDiff(([magx, magy, _]) => [
+      Math.abs(e.deltaX),
+      Math.abs(e.deltaY),
+      Math.abs(Math.abs(e.deltaX) - magx) + Math.abs(Math.abs(e.deltaY) - magy),
+    ])
 
     e.stopPropagation()
     e.preventDefault()
@@ -104,12 +111,18 @@ const Space = () => {
       }}
     >
       <div
-        className={`${styles.checker}`}
+        className={`${styles.checker} ease-out`}
         style={{
           width: '400px',
           height: '250px',
           scale: zoom,
           translate: `${translate.x}px ${translate.y}px`,
+          transitionProperty:
+            !drag &&
+            (panDiff[2] === 0 || (panDiff[2] >= 100 && panDiff[2] % 10 === 0))
+              ? 'scale, translate'
+              : 'none',
+          transitionDuration: panDiff[2] === 0 ? '200ms' : '100ms',
         }}
       ></div>
     </div>
