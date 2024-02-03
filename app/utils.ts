@@ -5,6 +5,17 @@ export type Point2 = {
   y: number
 }
 
+export type RefVal<T> = {
+  val: T
+}
+
+export const refVal = <T>(val: T) => ({ val })
+
+export const point2 = (x: number, y: number) => ({ x, y })
+
+export const movePt2 = (from: Point2, dx: number, dy: number) =>
+  point2(from.x + dx, from.y + dy)
+
 // usage: <className={AKHyper.className}
 export const AKHyper = Atkinson_Hyperlegible({
   weight: ['400', '700'],
