@@ -21,7 +21,10 @@ const SpaceWrapper = ({ children }: props) => {
   }, [])
 
   return (
-    <div className="h-full w-full overflow-clip bg-slate-500" ref={mouseTarget}>
+    <div
+      className="h-full w-full touch-none overflow-clip bg-slate-500"
+      ref={mouseTarget}
+    >
       <div
         ref={container}
         className={`${styles.checker} ease-out`}
