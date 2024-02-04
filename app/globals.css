@@ -11,6 +11,10 @@ body {
   font-family: var(--sys-font);
 }
 
+* {
+  touch-action: pan-x pan-y;
+}
+
 body.nodrag {
   pointer-events: none;
   user-select: none;

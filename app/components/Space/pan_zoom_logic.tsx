@@ -3,11 +3,13 @@ import { Point2, clamp, point2 } from '@/app/utils'
 import { RefObject } from 'react'
 
 export default class PanZoomController {
-  readonly mouseTarget: HTMLDivElement
-  readonly node: HTMLDivElement
-  translate = point2(0, 0)
-  scale = 1
-  drag = false
+  private readonly mouseTarget: HTMLDivElement
+  private readonly node: HTMLDivElement
+  private nodeMid: Point2
+  private mousePos = point2(0, 0)
+  private translate = point2(0, 0)
+  private scale = 1
+  private drag = false
 
   constructor(
     mouseTarget: RefObject<HTMLDivElement>,
@@ -17,6 +19,11 @@ export default class PanZoomController {
     if (!node.current) throw new Error('pan zoom node was not mounted?')
     this.mouseTarget = mouseTarget.current
     this.node = node.current
+    const nodeRect = this.node.getBoundingClientRect()
+    this.nodeMid = point2(
+      (nodeRect.left + nodeRect.right) / 2.0,
+      (nodeRect.top + nodeRect.bottom) / 2.0
+    )
   }
 
   /*****
@@ -27,23 +34,31 @@ export default class PanZoomController {
     this.mouseTarget.addEventListener('wheel', this.wheelHandler, {
       passive: false,
     })
-    // this.mouseTarget.addEventListener('mousedown', this.mouseDownHandler, {
-    //   passive: false,
-    // })
     this.mouseTarget.addEventListener('pointerdown', this.pointerDownHandler, {
       passive: false,
+    })
+    this.mouseTarget.addEventListener('mousemove', this.mouseMoveHandler, {
+      passive: true,
+      capture: true,
     })
   }
 
   readonly destroy = () => {
     this.mouseTarget.removeEventListener('wheel', this.wheelHandler)
-    // this.mouseTarget.removeEventListener('mousedown', this.mouseDownHandler)
     this.mouseTarget.removeEventListener('pointerdown', this.pointerDownHandler)
+    this.mouseTarget.removeEventListener('mousemove', this.mouseMoveHandler, {
+      capture: true,
+    })
   }
 
   /*****
    *****    HANDLERS
    *****/
+
+  private mouseMoveHandler = (e: MouseEvent) => {
+    this.mousePos.x = e.clientX
+    this.mousePos.y = e.clientY
+  }
 
   private pointerDownHandler = (e: PointerEvent) => {
     switch (e.pointerType) {
@@ -54,12 +69,10 @@ export default class PanZoomController {
         this.penDownHandler(e)
         break
       case 'touch':
-        console.log('touch')
-
+        this.touchDownHandler(e)
         break
-
       default:
-        console.log(`unknown: ${e.pointerType}`)
+        console.log(`unknown device: ${e.pointerType}`)
     }
   }
 
@@ -89,28 +102,26 @@ export default class PanZoomController {
 
   /*** PEN drag ***/
 
-  readonly PEN_DEADZONE = 10
+  private readonly PEN_DEADZONE = 10
   private penDownStart: Point2 | null = null
 
   private penDownHandler = (e: PointerEvent) => {
-    this.penDownStart = point2(e.offsetX, e.offsetY)
+    this.penDownStart = point2(e.clientX, e.clientY)
     this.addDragHandlers(this.penDragHandler, this.penDragStopHandler)
     e.stopPropagation()
     e.preventDefault()
   }
 
-  testmax = 0
-
   private penDragHandler = (e: PointerEvent) => {
     if (e.pointerType === 'pen' && e.buttons === 1) {
-      if (this.penDragInDeadzone(e.offsetX, e.offsetY)) {
+      if (this.penDragInDeadzone(e.clientX, e.clientY)) {
         // deadzone, count as tap
       } else {
         if (this.penDownStart !== null) {
           // leave deadzone
           this.translateNode(
-            e.offsetX - this.penDownStart.x,
-            e.offsetY - this.penDownStart.y
+            e.clientX - this.penDownStart.x,
+            e.clientY - this.penDownStart.y
           )
           this.penDownStart = null
         } else {
@@ -131,14 +142,105 @@ export default class PanZoomController {
     }
   }
 
-  private penDragInDeadzone = (offsetX: number, offsetY: number) => {
+  private penDragInDeadzone = (clientX: number, clientY: number) => {
     if (this.penDownStart === null) return false
-    const dx = offsetX - this.penDownStart.x
-    const dy = offsetY - this.penDownStart.y
+    const dx = clientX - this.penDownStart.x
+    const dy = clientY - this.penDownStart.y
     return dx * dx + dy * dy < this.PEN_DEADZONE * this.PEN_DEADZONE
   }
 
-  /*** WHEEL zoom and pan ***/
+  /*** TOUCH drag & pan & zoom ***/
+
+  private touch1: number | null = null
+  private touch2: number | null = null
+  private touchPos1: Point2 = point2(0, 0)
+  private touchPos2: Point2 = point2(0, 0)
+
+  private touchDownHandler = (e: PointerEvent) => {
+    this.setDragging(true)
+    this.addDragHandlers(this.touchDragHandler, this.touchDragStopHandler)
+    e.stopPropagation()
+    e.preventDefault()
+  }
+
+  private touchDragHandler = (e: PointerEvent) => {
+    if (e.pointerType === 'touch' && e.buttons === 1) {
+      //// track fingers
+      if (this.touch1 === null) {
+        // first finger
+        this.touch1 = e.pointerId
+        this.touchPos1 = point2(e.clientX, e.clientY)
+      } else if (this.touch2 === null && e.pointerId !== this.touch1) {
+        // second finger
+        this.touch2 = e.pointerId
+        this.touchPos2 = point2(e.clientX, e.clientY)
+      }
+
+      //// gestures
+      // one finger drag
+      if (e.pointerId === this.touch1 && this.touch2 === null) {
+        this.translateNode(e.movementX, e.movementY)
+        this.touchPos1.x = e.clientX
+        this.touchPos1.y = e.clientY
+      }
+      // two finger zoom & pan, finger 1
+      else if (e.pointerId === this.touch1) {
+        this.twoFingerManip(e, this.touchPos1, this.touchPos2)
+        this.touchPos1.x = e.clientX
+        this.touchPos1.y = e.clientY
+      }
+      // two finger zoom & pan, finger 2
+      else if (e.pointerId === this.touch2) {
+        this.twoFingerManip(e, this.touchPos2, this.touchPos1)
+        this.touchPos2.x = e.clientX
+        this.touchPos2.y = e.clientY
+      }
+    }
+  }
+
+  private touchDragStopHandler = (e: PointerEvent) => {
+    if (e.pointerType === 'touch') {
+      //// drop fingers
+      if (e.pointerId === this.touch2) {
+        // second finger
+        this.touch2 = null
+      } else if (e.pointerId === this.touch1) {
+        // first finger
+        this.touch1 = null
+        if (this.touch2 !== null) {
+          // second finger only left
+          this.touch1 = this.touch2
+          this.touch2 = null
+          this.touchPos1 = point2(this.touchPos2.x, this.touchPos2.y)
+        }
+      }
+
+      //// all fingers up
+      if (this.touch1 === null && this.touch2 === null) {
+        this.removeDragHandlers(
+          this.touchDragHandler,
+          this.touchDragStopHandler
+        )
+        this.setDragging(false)
+      }
+
+      e.stopPropagation()
+      e.preventDefault()
+    }
+  }
+
+  private twoFingerManip = (e: PointerEvent, a: Point2, b: Point2) => {
+    const factor =
+      dist(e.clientX, e.clientY, b.x, b.y) / dist(a.x, a.y, b.x, b.y)
+    const touchMid = point2(
+      (this.touchPos1.x + this.touchPos2.x) / 2,
+      (this.touchPos1.y + this.touchPos2.y) / 2
+    )
+    this.zoomOriginNode(factor, touchMid)
+    this.translateNode(e.movementX / 2.0, e.movementY / 2.0)
+  }
+
+  /*** WHEEL zoom & pan ***/
 
   private wheelHandler = (e: WheelEvent) => {
     const dx = normalizeWheelDelta(e.deltaX, e.deltaMode)
@@ -155,7 +257,7 @@ export default class PanZoomController {
         // trackpad pinch zoom
         factor = 1 - dy / 100.0
       }
-      this.scaleNode(factor)
+      this.zoomOriginNode(factor, this.mousePos)
     }
 
     // pan
@@ -182,12 +284,27 @@ export default class PanZoomController {
   private translateNode = (dx: number, dy: number) => {
     this.translate.x = this.translate.x + dx
     this.translate.y = this.translate.y + dy
+    this.nodeMid.x = this.nodeMid.x + dx
+    this.nodeMid.y = this.nodeMid.y + dy
     this.translateElementCSS(this.translate)
   }
 
   private scaleNode = (factor: number) => {
     this.scale = clamp(this.scale * factor, 0.5, 3)
     this.scaleElementCSS(this.scale)
+  }
+
+  private zoomOriginNode = (factor: number, origin: Point2) => {
+    // scale
+    const startScale = this.scale
+    this.scaleNode(factor)
+    const scaled = this.scale / startScale // may be clamped
+
+    // translate
+    this.translateNode(
+      (this.nodeMid.x - origin.x) * scaled + origin.x - this.nodeMid.x,
+      (this.nodeMid.y - origin.y) * scaled + origin.y - this.nodeMid.y
+    )
   }
 
   private setDragging = (dragging: boolean) => {
@@ -207,8 +324,8 @@ export default class PanZoomController {
     dragStopHandler: PointerEventHandler
   ) => {
     window.addEventListener('pointermove', dragHandler)
-    window.addEventListener('pointerup', dragStopHandler, { once: true })
-    window.addEventListener('pointercancel', dragStopHandler, { once: true })
+    window.addEventListener('pointerup', dragStopHandler)
+    window.addEventListener('pointercancel', dragStopHandler)
   }
 
   private removeDragHandlers = (
@@ -236,4 +353,10 @@ const normalizeWheelDelta = (delta: number, mode: number) => {
     }
   }
   return d
+}
+
+const dist = (x1: number, y1: number, x2: number, y2: number) => {
+  const dx = x1 - x2
+  const dy = y1 - y2
+  return Math.sqrt(dx * dx + dy * dy)
 }
