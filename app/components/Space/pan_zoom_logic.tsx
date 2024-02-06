@@ -159,6 +159,7 @@ export default class PanZoomController {
             e.clientY - this.penDownStart.y
           )
           this.penDownStart = null
+          this.lastPointerDown = null // prevent next double tap
         } else {
           // dragging
           if (!this.drag) this.setDragging(true) // transition during catch up
@@ -191,14 +192,15 @@ export default class PanZoomController {
 
   /*** TOUCH drag & pan & zoom ***/
 
+  private touchDownStart: Point2 | null = null
   private touch1: number | null = null
   private touch2: number | null = null
   private touchPos1: Point2 = point2(0, 0)
   private touchPos2: Point2 = point2(0, 0)
 
   private touchDownHandler = (e: PointerEvent) => {
+    this.touchDownStart = point2(e.clientX, e.clientY)
     this.trackTouches(e)
-    this.setDragging(true)
     this.addDragHandlers(this.touchDragHandler, this.touchDragStopHandler)
     e.stopPropagation()
     e.preventDefault()
@@ -211,21 +213,43 @@ export default class PanZoomController {
       //// gestures
       // one finger drag
       if (e.pointerId === this.touch1 && this.touch2 === null) {
-        this.translateNode(
-          e.clientX - this.touchPos1.x,
-          e.clientY - this.touchPos1.y
-        )
+        if (this.touchDragInDeadzone(e.clientX, e.clientY)) {
+          // deadzone, count as tap
+        } else {
+          if (this.touchDownStart !== null) {
+            // leave deadzone
+            this.translateNode(
+              e.clientX - this.touchDownStart.x,
+              e.clientY - this.touchDownStart.y
+            )
+            this.touchDownStart = null
+            this.lastPointerDown = null // prevent next double tap
+          } else {
+            // dragging
+            if (!this.drag) this.setDragging(true) // transition during catch up
+            this.translateNode(
+              e.clientX - this.touchPos1.x,
+              e.clientY - this.touchPos1.y
+            )
+          }
+        }
         this.touchPos1.x = e.clientX
         this.touchPos1.y = e.clientY
       }
       // two finger zoom & pan, finger 1
       else if (e.pointerId === this.touch1) {
+        if (!this.drag) this.setDragging(true)
+        this.touchDownStart = null
+        this.lastPointerDown = null // prevent next double tap
         this.twoFingerManip(e, this.touchPos1, this.touchPos2)
         this.touchPos1.x = e.clientX
         this.touchPos1.y = e.clientY
       }
       // two finger zoom & pan, finger 2
       else if (e.pointerId === this.touch2) {
+        if (!this.drag) this.setDragging(true)
+        this.touchDownStart = null
+        this.lastPointerDown = null // prevent next double tap
         this.twoFingerManip(e, this.touchPos2, this.touchPos1)
         this.touchPos2.x = e.clientX
         this.touchPos2.y = e.clientY
@@ -285,6 +309,13 @@ export default class PanZoomController {
       this.touch2 = e.pointerId
       this.touchPos2 = point2(e.clientX, e.clientY)
     }
+  }
+
+  private touchDragInDeadzone = (clientX: number, clientY: number) => {
+    if (this.touchDownStart === null || this.touch2 !== null) return false
+    const dx = clientX - this.touchDownStart.x
+    const dy = clientY - this.touchDownStart.y
+    return dx * dx + dy * dy < this.TAP_DEADZONE ** 2
   }
 
   /*** WHEEL zoom & pan ***/
