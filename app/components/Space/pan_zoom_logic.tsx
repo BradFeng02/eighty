@@ -79,6 +79,8 @@ export default class PanZoomController {
   /*** MOUSE drag ***/
 
   private mouseDownHandler = (e: PointerEvent) => {
+    this.mousePos.x = e.clientX
+    this.mousePos.y = e.clientY
     this.setDragging(true)
     this.addDragHandlers(this.mouseDragHandler, this.mouseDragStopHandler)
     e.stopPropagation()
@@ -87,7 +89,12 @@ export default class PanZoomController {
 
   private mouseDragHandler = (e: PointerEvent) => {
     if (e.pointerType === 'mouse' && e.buttons === 1) {
-      this.translateNode(e.movementX, e.movementY)
+      this.translateNode(
+        e.clientX - this.mousePos.x,
+        e.clientY - this.mousePos.y
+      )
+      this.mousePos.x = e.clientX
+      this.mousePos.y = e.clientY
     }
   }
 
@@ -104,9 +111,11 @@ export default class PanZoomController {
 
   private readonly PEN_DEADZONE = 10
   private penDownStart: Point2 | null = null
+  private penPos: Point2 = point2(0, 0)
 
   private penDownHandler = (e: PointerEvent) => {
     this.penDownStart = point2(e.clientX, e.clientY)
+    this.penPos = point2(e.clientX, e.clientY)
     this.addDragHandlers(this.penDragHandler, this.penDragStopHandler)
     e.stopPropagation()
     e.preventDefault()
@@ -127,9 +136,14 @@ export default class PanZoomController {
         } else {
           // dragging
           if (!this.drag) this.setDragging(true) // transition during catch up
-          this.translateNode(e.movementX, e.movementY)
+          this.translateNode(
+            e.clientX - this.penPos.x,
+            e.clientY - this.penPos.y
+          )
         }
       }
+      this.penPos.x = e.clientX
+      this.penPos.y = e.clientY
     }
   }
 
@@ -179,7 +193,10 @@ export default class PanZoomController {
       //// gestures
       // one finger drag
       if (e.pointerId === this.touch1 && this.touch2 === null) {
-        this.translateNode(e.movementX, e.movementY)
+        this.translateNode(
+          e.clientX - this.touchPos1.x,
+          e.clientY - this.touchPos1.y
+        )
         this.touchPos1.x = e.clientX
         this.touchPos1.y = e.clientY
       }
@@ -233,11 +250,11 @@ export default class PanZoomController {
     const factor =
       dist(e.clientX, e.clientY, b.x, b.y) / dist(a.x, a.y, b.x, b.y)
     const touchMid = point2(
-      (this.touchPos1.x + this.touchPos2.x) / 2,
-      (this.touchPos1.y + this.touchPos2.y) / 2
+      (this.touchPos1.x + this.touchPos2.x) / 2.0,
+      (this.touchPos1.y + this.touchPos2.y) / 2.0
     )
     this.zoomOriginNode(factor, touchMid)
-    this.translateNode(e.movementX / 2.0, e.movementY / 2.0)
+    this.translateNode((e.clientX - a.x) / 2.0, (e.clientY - a.y) / 2.0)
   }
 
   /*** WHEEL zoom & pan ***/
