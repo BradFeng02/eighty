@@ -29,5 +29,5 @@ export const AKHyper = Atkinson_Hyperlegible({
   subsets: ['latin-ext'],
 })
 
-export const clamp = (x: number, min: number, max: number) =>
-  Math.min(Math.max(x, min), max)
+export const clamp = (n: number, min: number, max: number) =>
+  Math.min(Math.max(n, min), max)

@@ -5,13 +5,16 @@ import { RefObject } from 'react'
 export default class PanZoomController {
   private readonly container: HTMLDivElement
   private readonly node: HTMLDivElement
-  private readonly DEFAULT_PADDING = 20
+  private readonly DEFAULT_PADDING = 10
   private readonly MIN_ZOOM = 0.5
   private readonly MAX_ZOOM = 3
   private readonly TAP_DEADZONE = 10
   private readonly DOUBLE_TAP_DEADZONE = 30
   private readonly DOUBLE_TAP_MS = 500
 
+  private initScale: number
+  private containerBounds: Point2
+  private nodeBounds: Point2
   private nodeMid: Point2
   private resetNodeMid: Point2
   private translate = point2(0, 0)
@@ -36,11 +39,17 @@ export default class PanZoomController {
     this.resetNodeMid = point2(this.nodeMid.x, this.nodeMid.y)
 
     const containerRect = this.container.getBoundingClientRect()
-    const initScale = Math.min(
-      (containerRect.width - this.DEFAULT_PADDING) / nodeRect.width,
-      (containerRect.height - this.DEFAULT_PADDING) / nodeRect.height
+    this.initScale = Math.min(
+      (containerRect.width - this.DEFAULT_PADDING * 2) / nodeRect.width,
+      (containerRect.height - this.DEFAULT_PADDING * 2) / nodeRect.height
     )
-    this.node.style.transform = `scale(${initScale})`
+    this.node.style.transform = `scale(${this.initScale})`
+
+    this.nodeBounds = point2(nodeRect.width / 2.0, nodeRect.height / 2.0)
+    this.containerBounds = point2(
+      containerRect.width / 2.0,
+      containerRect.height / 2.0
+    )
   }
 
   /*****
@@ -331,11 +340,13 @@ export default class PanZoomController {
     if (this.touch1 === null) {
       // first finger
       this.touch1 = e.pointerId
-      this.touchPos1 = point2(e.clientX, e.clientY)
+      this.touchPos1.x = e.clientX
+      this.touchPos1.y = e.clientY
     } else if (this.touch2 === null && e.pointerId !== this.touch1) {
       // second finger
       this.touch2 = e.pointerId
-      this.touchPos2 = point2(e.clientX, e.clientY)
+      this.touchPos2.x = e.clientX
+      this.touchPos2.y = e.clientY
     }
   }
 
@@ -438,25 +449,37 @@ export default class PanZoomController {
    *****    UTILS
    *****/
 
-  private translateElementCSS = (translate: Point2) => {
+  private _translateElementCSS = (translate: Point2) => {
     this.node.style.translate = `${translate.x}px ${translate.y}px`
   }
 
-  private scaleElementCSS = (scale: number) => {
+  private _scaleElementCSS = (scale: number) => {
     this.node.style.scale = scale.toString()
   }
 
   private translateNode = (dx: number, dy: number) => {
-    this.translate.x = this.translate.x + dx
-    this.translate.y = this.translate.y + dy
-    this.nodeMid.x = this.nodeMid.x + dx
-    this.nodeMid.y = this.nodeMid.y + dy
-    this.translateElementCSS(this.translate)
+    const bx =
+      Math.max(
+        this.containerBounds.x - this.scaled(this.nodeBounds.x),
+        this.scaled(this.nodeBounds.x)
+      ) - this.DEFAULT_PADDING
+    const by =
+      Math.max(
+        this.containerBounds.y - this.scaled(this.nodeBounds.y),
+        this.scaled(this.nodeBounds.y)
+      ) - this.DEFAULT_PADDING
+    const clampdx = clamp(this.translate.x + dx, -bx, bx) - this.translate.x
+    const clampdy = clamp(this.translate.y + dy, -by, by) - this.translate.y
+    this.translate.x = this.translate.x + clampdx
+    this.translate.y = this.translate.y + clampdy
+    this.nodeMid.x = this.nodeMid.x + clampdx
+    this.nodeMid.y = this.nodeMid.y + clampdy
+    this._translateElementCSS(this.translate)
   }
 
   private scaleNode = (factor: number) => {
     this.scale = clamp(this.scale * factor, this.MIN_ZOOM, this.MAX_ZOOM)
-    this.scaleElementCSS(this.scale)
+    this._scaleElementCSS(this.scale)
   }
 
   private zoomOriginNode = (factor: number, origin: Point2) => {
@@ -501,6 +524,8 @@ export default class PanZoomController {
     window.removeEventListener('pointerup', dragStopHandler)
     window.removeEventListener('pointercancel', dragStopHandler)
   }
+
+  private scaled = (n: number) => n * this.initScale * this.scale
 }
 
 // utils
