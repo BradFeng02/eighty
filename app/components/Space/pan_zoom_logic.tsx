@@ -6,7 +6,7 @@ export default class PanZoomController {
   private readonly mouseTarget: HTMLDivElement
   private readonly node: HTMLDivElement
   private readonly TAP_DEADZONE = 10
-  private readonly DOUBLE_TAP_DEADZONE = 20
+  private readonly DOUBLE_TAP_DEADZONE = 30
   private readonly DOUBLE_TAP_MS = 500
 
   private nodeMid: Point2
@@ -67,6 +67,7 @@ export default class PanZoomController {
 
   private pointerDownHandler = (e: PointerEvent) => {
     let doubletap = false
+
     switch (e.pointerType) {
       case 'mouse':
         this.mouseDownHandler(e)
@@ -85,6 +86,7 @@ export default class PanZoomController {
       default:
         console.log(`unknown device: ${e.pointerType}`)
     }
+
     if (doubletap) this.lastPointerDown = null
     else
       this.lastPointerDown = {
@@ -308,12 +310,13 @@ export default class PanZoomController {
       if (Math.abs(dy) >= WHEEL_PX_THRESH) {
         // wheel + ctrl
         // ASSUMES pixel delta >= WHEEL_PX_THRESH
-        factor = 1 - dy / SPACE_ZOOM_RATE
+        factor = 1 + Math.abs(dy / SPACE_ZOOM_RATE)
       } else {
         // trackpad pinch zoom
-        factor = 1 - dy / 100.0
+        factor = 1 + Math.abs(dy / 100)
       }
-      this.zoomOriginNode(factor, this.mousePos)
+      // this.zoomOriginNode((this.scale - dy / 100.0) / this.scale, this.mousePos)
+      this.zoomOriginNode(dy < 0 ? factor : 1.0 / factor, this.mousePos)
     }
 
     // pan
