@@ -16,6 +16,10 @@ export const point2 = (x: number, y: number) => ({ x, y })
 export const movePt2 = (from: Point2, dx: number, dy: number) =>
   point2(from.x + dx, from.y + dy)
 
+export const pt2Equals = (a: Point2, b: Point2) => {
+  return a.x === b.x && a.y === b.y
+}
+
 // usage: <className={AKHyper.className}
 export const AKHyper = Atkinson_Hyperlegible({
   weight: ['400', '700'],

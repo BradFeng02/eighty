@@ -1,11 +1,13 @@
 import { SPACE_ZOOM_RATE, WHEEL_PX_THRESH } from '@/app/constants'
-import { Point2, clamp, point2 } from '@/app/utils'
+import { Point2, clamp, point2, pt2Equals } from '@/app/utils'
 import { RefObject } from 'react'
 
 export default class PanZoomController {
   private readonly container: HTMLDivElement
   private readonly node: HTMLDivElement
   private readonly DEFAULT_PADDING = 20
+  private readonly MIN_ZOOM = 0.5
+  private readonly MAX_ZOOM = 3
   private readonly TAP_DEADZONE = 10
   private readonly DOUBLE_TAP_DEADZONE = 30
   private readonly DOUBLE_TAP_MS = 500
@@ -109,13 +111,19 @@ export default class PanZoomController {
         this.DOUBLE_TAP_DEADZONE ** 2
     ) {
       // reset zoom if zoomed in/out, scale 2 otherwise
-      if (this.scale != 1) {
+      if (this.scale != 1 || !pt2Equals(this.nodeMid, this.resetNodeMid)) {
         this.translateNode(
           this.resetNodeMid.x - this.nodeMid.x,
           this.resetNodeMid.y - this.nodeMid.y
         )
         this.zoomOriginNode(1.0 / this.scale, this.resetNodeMid)
-      } else this.zoomOriginNode(2.0 / this.scale, point2(e.clientX, e.clientY))
+      } else {
+        this.zoomOriginNode(2.0 / this.scale, point2(e.clientX, e.clientY))
+        this.translateNode(
+          this.resetNodeMid.x - e.clientX,
+          this.resetNodeMid.y - e.clientY
+        )
+      }
       return true
     }
     return false
@@ -447,7 +455,7 @@ export default class PanZoomController {
   }
 
   private scaleNode = (factor: number) => {
-    this.scale = clamp(this.scale * factor, 0.5, 3)
+    this.scale = clamp(this.scale * factor, this.MIN_ZOOM, this.MAX_ZOOM)
     this.scaleElementCSS(this.scale)
   }
 
