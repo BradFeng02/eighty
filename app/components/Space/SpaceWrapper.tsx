@@ -7,13 +7,14 @@ type props = {
 }
 
 const SpaceWrapper = ({ children }: props) => {
-  const mouseTarget = useRef<HTMLDivElement>(null)
   const container = useRef<HTMLDivElement>(null)
+  const wrapper = useRef<HTMLDivElement>(null)
 
   // mount & unmount
   useEffect(() => {
-    const controller = new PanZoomController(mouseTarget, container)
+    const controller = new PanZoomController(container, wrapper)
     controller.registerListeners()
+    if (wrapper.current) wrapper.current.style.opacity = '1'
 
     return () => {
       controller.destroy()
@@ -22,16 +23,18 @@ const SpaceWrapper = ({ children }: props) => {
 
   return (
     <div
-      className="h-full w-full touch-none overflow-clip bg-slate-500"
-      ref={mouseTarget}
+      className="flex h-full w-full touch-none items-center justify-center overflow-clip bg-slate-500"
+      ref={container}
     >
       <div
-        ref={container}
+        ref={wrapper}
         className={`${styles.checker} ease-out`}
         style={{
           width: '400px',
           height: '250px',
           transitionDuration: '150ms',
+          transitionProperty: 'opacity, scale, translate',
+          opacity: 0,
         }}
       >
         {children}

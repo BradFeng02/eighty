@@ -3,31 +3,42 @@ import { Point2, clamp, point2 } from '@/app/utils'
 import { RefObject } from 'react'
 
 export default class PanZoomController {
-  private readonly mouseTarget: HTMLDivElement
+  private readonly container: HTMLDivElement
   private readonly node: HTMLDivElement
+  private readonly DEFAULT_PADDING = 20
   private readonly TAP_DEADZONE = 10
   private readonly DOUBLE_TAP_DEADZONE = 30
   private readonly DOUBLE_TAP_MS = 500
 
   private nodeMid: Point2
+  private resetNodeMid: Point2
   private translate = point2(0, 0)
   private scale = 1
   private drag = false
   private lastPointerDown: pointerEventDetails | null = null
 
   constructor(
-    mouseTarget: RefObject<HTMLDivElement>,
+    container: RefObject<HTMLDivElement>,
     node: RefObject<HTMLDivElement>
   ) {
-    if (!mouseTarget.current) throw new Error('mouse target was not mounted?')
+    if (!container.current) throw new Error('mouse target was not mounted?')
     if (!node.current) throw new Error('pan zoom node was not mounted?')
-    this.mouseTarget = mouseTarget.current
+    this.container = container.current
     this.node = node.current
+
     const nodeRect = this.node.getBoundingClientRect()
     this.nodeMid = point2(
       (nodeRect.left + nodeRect.right) / 2.0,
       (nodeRect.top + nodeRect.bottom) / 2.0
     )
+    this.resetNodeMid = point2(this.nodeMid.x, this.nodeMid.y)
+
+    const containerRect = this.container.getBoundingClientRect()
+    const initScale = Math.min(
+      (containerRect.width - this.DEFAULT_PADDING) / nodeRect.width,
+      (containerRect.height - this.DEFAULT_PADDING) / nodeRect.height
+    )
+    this.node.style.transform = `scale(${initScale})`
   }
 
   /*****
@@ -35,17 +46,22 @@ export default class PanZoomController {
    *****/
 
   readonly registerListeners = () => {
-    this.mouseTarget.addEventListener('wheel', this.wheelHandler, {
+    this.container.addEventListener('wheel', this.wheelHandler, {
       passive: false,
     })
-    this.mouseTarget.addEventListener('pointerdown', this.pointerDownHandler, {
+    this.container.addEventListener('pointerdown', this.pointerDownHandler, {
       passive: false,
     })
   }
 
   readonly destroy = () => {
-    this.mouseTarget.removeEventListener('wheel', this.wheelHandler)
-    this.mouseTarget.removeEventListener('pointerdown', this.pointerDownHandler)
+    this.container.removeEventListener('wheel', this.wheelHandler)
+    this.container.removeEventListener('pointerdown', this.pointerDownHandler)
+    if (process.env.NODE_ENV !== 'production') {
+      // strict mode workaround
+      console.log('Space - dev mode')
+      this.node.style.transform = ''
+    }
   }
 
   /*****
@@ -92,10 +108,14 @@ export default class PanZoomController {
         (e.clientY - this.lastPointerDown.clientY) ** 2 <
         this.DOUBLE_TAP_DEADZONE ** 2
     ) {
-      // reset zoom if zoomed in, scale 2 otherwise
-      if (this.scale > 1)
-        this.zoomOriginNode(1.0 / this.scale, point2(e.clientX, e.clientY))
-      else this.zoomOriginNode(2.0 / this.scale, point2(e.clientX, e.clientY))
+      // reset zoom if zoomed in/out, scale 2 otherwise
+      if (this.scale != 1) {
+        this.translateNode(
+          this.resetNodeMid.x - this.nodeMid.x,
+          this.resetNodeMid.y - this.nodeMid.y
+        )
+        this.zoomOriginNode(1.0 / this.scale, this.resetNodeMid)
+      } else this.zoomOriginNode(2.0 / this.scale, point2(e.clientX, e.clientY))
       return true
     }
     return false
@@ -365,7 +385,7 @@ export default class PanZoomController {
     // zoom
     if (e.ctrlKey) {
       // wheel or trackpad pinch
-      const zoomStep = wheel ? this.WHEEL_ZOOM_STEP : dy
+      const zoomStep = wheel && dy ? this.WHEEL_ZOOM_STEP : dy
       const factor = 1 + Math.abs(zoomStep / 100)
       this.zoomOriginNode(
         dy < 0 ? factor : 1.0 / factor,
