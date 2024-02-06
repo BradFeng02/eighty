@@ -5,11 +5,16 @@ import { RefObject } from 'react'
 export default class PanZoomController {
   private readonly mouseTarget: HTMLDivElement
   private readonly node: HTMLDivElement
+  private readonly TAP_DEADZONE = 10
+  private readonly DOUBLE_TAP_DEADZONE = 20
+  private readonly DOUBLE_TAP_MS = 500
+
   private nodeMid: Point2
   private mousePos = point2(0, 0)
   private translate = point2(0, 0)
   private scale = 1
   private drag = false
+  private lastPointerDown: pointerEventDetails | null = null
 
   constructor(
     mouseTarget: RefObject<HTMLDivElement>,
@@ -61,19 +66,50 @@ export default class PanZoomController {
   }
 
   private pointerDownHandler = (e: PointerEvent) => {
+    let doubletap = false
     switch (e.pointerType) {
       case 'mouse':
         this.mouseDownHandler(e)
         break
       case 'pen':
-        this.penDownHandler(e)
+        doubletap = this.catchDoubleTap('pen', e)
+        if (!doubletap) this.penDownHandler(e)
         break
       case 'touch':
-        this.touchDownHandler(e)
+        if (this.touch1 === null && this.touch2 === null) {
+          // maybe some second fingers register as double tap?
+          doubletap = this.catchDoubleTap('touch', e)
+        }
+        if (!doubletap) this.touchDownHandler(e)
         break
       default:
         console.log(`unknown device: ${e.pointerType}`)
     }
+    if (doubletap) this.lastPointerDown = null
+    else
+      this.lastPointerDown = {
+        type: e.pointerType,
+        time: e.timeStamp,
+        clientX: e.clientX,
+        clientY: e.clientY,
+      }
+  }
+
+  private catchDoubleTap = (type: string, e: PointerEvent) => {
+    if (
+      this.lastPointerDown?.type === type && // same type
+      e.timeStamp - this.lastPointerDown.time <= this.DOUBLE_TAP_MS && // time window
+      (e.clientX - this.lastPointerDown.clientX) ** 2 + // same place
+        (e.clientY - this.lastPointerDown.clientY) ** 2 <
+        this.DOUBLE_TAP_DEADZONE ** 2
+    ) {
+      // reset zoom if zoomed in, scale 2 otherwise
+      if (this.scale > 1)
+        this.zoomOriginNode(1.0 / this.scale, point2(e.clientX, e.clientY))
+      else this.zoomOriginNode(2.0 / this.scale, point2(e.clientX, e.clientY))
+      return true
+    }
+    return false
   }
 
   /*** MOUSE drag ***/
@@ -109,7 +145,6 @@ export default class PanZoomController {
 
   /*** PEN drag ***/
 
-  private readonly PEN_DEADZONE = 10
   private penDownStart: Point2 | null = null
   private penPos: Point2 = point2(0, 0)
 
@@ -160,7 +195,7 @@ export default class PanZoomController {
     if (this.penDownStart === null) return false
     const dx = clientX - this.penDownStart.x
     const dy = clientY - this.penDownStart.y
-    return dx * dx + dy * dy < this.PEN_DEADZONE * this.PEN_DEADZONE
+    return dx * dx + dy * dy < this.TAP_DEADZONE ** 2
   }
 
   /*** TOUCH drag & pan & zoom ***/
@@ -171,6 +206,7 @@ export default class PanZoomController {
   private touchPos2: Point2 = point2(0, 0)
 
   private touchDownHandler = (e: PointerEvent) => {
+    this.trackTouches(e)
     this.setDragging(true)
     this.addDragHandlers(this.touchDragHandler, this.touchDragStopHandler)
     e.stopPropagation()
@@ -179,16 +215,7 @@ export default class PanZoomController {
 
   private touchDragHandler = (e: PointerEvent) => {
     if (e.pointerType === 'touch' && e.buttons === 1) {
-      //// track fingers
-      if (this.touch1 === null) {
-        // first finger
-        this.touch1 = e.pointerId
-        this.touchPos1 = point2(e.clientX, e.clientY)
-      } else if (this.touch2 === null && e.pointerId !== this.touch1) {
-        // second finger
-        this.touch2 = e.pointerId
-        this.touchPos2 = point2(e.clientX, e.clientY)
-      }
+      this.trackTouches(e)
 
       //// gestures
       // one finger drag
@@ -255,6 +282,18 @@ export default class PanZoomController {
     )
     this.zoomOriginNode(factor, touchMid)
     this.translateNode((e.clientX - a.x) / 2.0, (e.clientY - a.y) / 2.0)
+  }
+
+  private trackTouches = (e: PointerEvent) => {
+    if (this.touch1 === null) {
+      // first finger
+      this.touch1 = e.pointerId
+      this.touchPos1 = point2(e.clientX, e.clientY)
+    } else if (this.touch2 === null && e.pointerId !== this.touch1) {
+      // second finger
+      this.touch2 = e.pointerId
+      this.touchPos2 = point2(e.clientX, e.clientY)
+    }
   }
 
   /*** WHEEL zoom & pan ***/
@@ -358,6 +397,12 @@ export default class PanZoomController {
 // utils
 
 type PointerEventHandler = (e: PointerEvent) => void
+type pointerEventDetails = {
+  type: string
+  time: number
+  clientX: number
+  clientY: number
+}
 
 const normalizeWheelDelta = (delta: number, mode: number) => {
   // some browsers wheel not pixel
