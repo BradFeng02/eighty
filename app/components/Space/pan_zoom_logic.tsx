@@ -10,7 +10,6 @@ export default class PanZoomController {
   private readonly DOUBLE_TAP_MS = 500
 
   private nodeMid: Point2
-  private mousePos = point2(0, 0)
   private translate = point2(0, 0)
   private scale = 1
   private drag = false
@@ -42,28 +41,16 @@ export default class PanZoomController {
     this.mouseTarget.addEventListener('pointerdown', this.pointerDownHandler, {
       passive: false,
     })
-    this.mouseTarget.addEventListener('mousemove', this.mouseMoveHandler, {
-      passive: true,
-      capture: true,
-    })
   }
 
   readonly destroy = () => {
     this.mouseTarget.removeEventListener('wheel', this.wheelHandler)
     this.mouseTarget.removeEventListener('pointerdown', this.pointerDownHandler)
-    this.mouseTarget.removeEventListener('mousemove', this.mouseMoveHandler, {
-      capture: true,
-    })
   }
 
   /*****
    *****    HANDLERS
    *****/
-
-  private mouseMoveHandler = (e: MouseEvent) => {
-    this.mousePos.x = e.clientX
-    this.mousePos.y = e.clientY
-  }
 
   private pointerDownHandler = (e: PointerEvent) => {
     let doubletap = false
@@ -115,6 +102,8 @@ export default class PanZoomController {
   }
 
   /*** MOUSE drag ***/
+
+  private mousePos: Point2 = point2(0, 0)
 
   private mouseDownHandler = (e: PointerEvent) => {
     this.mousePos.x = e.clientX
@@ -300,23 +289,57 @@ export default class PanZoomController {
 
   /*** WHEEL zoom & pan ***/
 
+  private readonly WHEEL_SCROLL_STEP = 50
+  private readonly WHEEL_ZOOM_STEP = 15
+  private readonly WHEEL_BREAK_TIME_MS = 100
+
+  private lastWheelTime: number = -1000
+  private lastMagX: number = -1
+  private lastMagY: number = -1
+
   private wheelHandler = (e: WheelEvent) => {
-    const dx = normalizeWheelDelta(e.deltaX, e.deltaMode)
-    const dy = normalizeWheelDelta(e.deltaY, e.deltaMode)
+    const dx_px = normalizeWheelDelta(e.deltaX, e.deltaMode)
+    const dy_px = normalizeWheelDelta(e.deltaY, e.deltaMode)
+    const magX = Math.abs(dx_px)
+    const magY = Math.abs(dy_px)
+
+    // this.lastMagX == -1 ? 0 : dx_px  <=== first ever scroll, ignore
+    const [dx, wheelX] = this.adjustWheel(
+      this.lastMagX == -1 ? 0 : dx_px,
+      magX,
+      this.lastMagX,
+      e.timeStamp
+    )
+    const [dy, wheelY] = this.adjustWheel(
+      this.lastMagY == -1 ? 0 : dy_px,
+      magY,
+      this.lastMagY,
+      e.timeStamp
+    )
+    const wheel = wheelX || wheelY
+
+    // start of new scroll
+    if (wheel || e.timeStamp - this.lastWheelTime > this.WHEEL_BREAK_TIME_MS) {
+      if (magX > 0) this.lastMagX = magX
+      if (magY > 0) this.lastMagY = magY
+    }
+    // if ever not wheel, disable possibility for rest of scroll
+    else {
+      this.lastMagX = 0.11111111111
+      this.lastMagY = 0.11111111111
+    }
+
+    this.lastWheelTime = e.timeStamp
 
     // zoom
     if (e.ctrlKey) {
-      let factor = 1
-      if (Math.abs(dy) >= WHEEL_PX_THRESH) {
-        // wheel + ctrl
-        // ASSUMES pixel delta >= WHEEL_PX_THRESH
-        factor = 1 + Math.abs(dy / SPACE_ZOOM_RATE)
-      } else {
-        // trackpad pinch zoom
-        factor = 1 + Math.abs(dy / 100)
-      }
-      // this.zoomOriginNode((this.scale - dy / 100.0) / this.scale, this.mousePos)
-      this.zoomOriginNode(dy < 0 ? factor : 1.0 / factor, this.mousePos)
+      // wheel or trackpad pinch
+      const zoomStep = wheel ? this.WHEEL_ZOOM_STEP : dy
+      const factor = 1 + Math.abs(zoomStep / 100)
+      this.zoomOriginNode(
+        dy < 0 ? factor : 1.0 / factor,
+        point2(e.clientX, e.clientY)
+      )
     }
 
     // pan
@@ -326,6 +349,30 @@ export default class PanZoomController {
 
     e.stopPropagation()
     e.preventDefault()
+  }
+
+  private adjustWheel = (
+    delta: number,
+    mag: number,
+    lastMag: number,
+    timestamp: number
+  ): [number, boolean] => {
+    if (!delta) return [delta, false] // skip 0
+    // if same magnitude, likely wheel -> fixed step
+    if (
+      mag > this.WHEEL_SCROLL_STEP &&
+      lastMag > this.WHEEL_SCROLL_STEP &&
+      (mag % lastMag === 0 || lastMag % mag === 0)
+    ) {
+      return [this.WHEEL_SCROLL_STEP * Math.sign(delta), true]
+    }
+    // ignore difference if starting new scroll (time based)
+    if (timestamp - this.lastWheelTime > this.WHEEL_BREAK_TIME_MS)
+      return [
+        clamp(delta, -this.WHEEL_SCROLL_STEP, this.WHEEL_SCROLL_STEP),
+        false,
+      ]
+    return [delta, false]
   }
 
   /*****
