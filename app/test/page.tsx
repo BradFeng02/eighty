@@ -5,7 +5,7 @@ const testpage = () => {
   return (
     <>
       <main
-        className={`${styles['test-container']} flex border-8 border-solid border-black`}
+        className={`${styles['test-container']} border-8 border-solid border-black`}
       >
         <Space></Space>
       </main>

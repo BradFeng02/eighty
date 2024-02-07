@@ -1,18 +1,22 @@
-import { SPACE_ZOOM_RATE, WHEEL_PX_THRESH } from '@/app/constants'
+import { GRID_SIZE_PX } from './constants'
 import { Point2, clamp, point2, pt2Equals } from '@/app/utils'
 import { RefObject } from 'react'
+
+const DEFAULT_PADDING = 10
+const TAP_DEADZONE = 10
+const DOUBLE_TAP_DEADZONE = 30
+const DOUBLE_TAP_MS = 500
 
 export default class PanZoomController {
   private readonly container: HTMLDivElement
   private readonly node: HTMLDivElement
-  private readonly DEFAULT_PADDING = 10
-  private readonly MIN_ZOOM = 0.5
-  private readonly MAX_ZOOM = 3
-  private readonly TAP_DEADZONE = 10
-  private readonly DOUBLE_TAP_DEADZONE = 30
-  private readonly DOUBLE_TAP_MS = 500
 
+  private min_zoom = 0.5
+  private max_zoom: number
+  private target_zoom: number
   private initScale: number
+  private containerPos: Point2
+  private containerOffset = point2(0, 0)
   private containerBounds: Point2
   private nodeBounds: Point2
   private nodeMid: Point2
@@ -31,19 +35,26 @@ export default class PanZoomController {
     this.container = container.current
     this.node = node.current
 
+    const containerRect = this.container.getBoundingClientRect()
     const nodeRect = this.node.getBoundingClientRect()
+
+    this.containerPos = point2(containerRect.x, containerRect.y)
     this.nodeMid = point2(
       (nodeRect.left + nodeRect.right) / 2.0,
       (nodeRect.top + nodeRect.bottom) / 2.0
     )
     this.resetNodeMid = point2(this.nodeMid.x, this.nodeMid.y)
 
-    const containerRect = this.container.getBoundingClientRect()
     this.initScale = Math.min(
-      (containerRect.width - this.DEFAULT_PADDING * 2) / nodeRect.width,
-      (containerRect.height - this.DEFAULT_PADDING * 2) / nodeRect.height
+      (containerRect.width - DEFAULT_PADDING * 2) / nodeRect.width,
+      (containerRect.height - DEFAULT_PADDING * 2) / nodeRect.height
     )
+
     this.node.style.transform = `scale(${this.initScale})`
+    this.max_zoom =
+      Math.max(nodeRect.width, nodeRect.height) / (GRID_SIZE_PX * 4)
+    this.target_zoom =
+      Math.max(nodeRect.width, nodeRect.height) / (GRID_SIZE_PX * 8)
 
     this.nodeBounds = point2(nodeRect.width / 2.0, nodeRect.height / 2.0)
     this.containerBounds = point2(
@@ -68,11 +79,9 @@ export default class PanZoomController {
   readonly destroy = () => {
     this.container.removeEventListener('wheel', this.wheelHandler)
     this.container.removeEventListener('pointerdown', this.pointerDownHandler)
-    if (process.env.NODE_ENV !== 'production') {
-      // strict mode workaround
-      console.log('Space - dev mode')
-      this.node.style.transform = ''
-    }
+    this.setDragging(false)
+    this.node.style.transform = ''
+    this.node.style.transitionDuration = FAST_TRANSITION
   }
 
   /*****
@@ -80,7 +89,9 @@ export default class PanZoomController {
    *****/
 
   private pointerDownHandler = (e: PointerEvent) => {
+    this.trackContainerMoved()
     let doubletap = false
+    this.node.style.transitionDuration = FAST_TRANSITION
 
     switch (e.pointerType) {
       case 'mouse':
@@ -114,11 +125,12 @@ export default class PanZoomController {
   private catchDoubleTap = (type: string, e: PointerEvent) => {
     if (
       this.lastPointerDown?.type === type && // same type
-      e.timeStamp - this.lastPointerDown.time <= this.DOUBLE_TAP_MS && // time window
+      e.timeStamp - this.lastPointerDown.time <= DOUBLE_TAP_MS && // time window
       (e.clientX - this.lastPointerDown.clientX) ** 2 + // same place
         (e.clientY - this.lastPointerDown.clientY) ** 2 <
-        this.DOUBLE_TAP_DEADZONE ** 2
+        DOUBLE_TAP_DEADZONE ** 2
     ) {
+      this.node.style.transitionDuration = SLOW_TRANSITION
       // reset zoom if zoomed in/out, scale 2 otherwise
       if (this.scale != 1 || !pt2Equals(this.nodeMid, this.resetNodeMid)) {
         this.translateNode(
@@ -127,7 +139,10 @@ export default class PanZoomController {
         )
         this.zoomOriginNode(1.0 / this.scale, this.resetNodeMid)
       } else {
-        this.zoomOriginNode(2.0 / this.scale, point2(e.clientX, e.clientY))
+        this.zoomOriginNode(
+          this.target_zoom / this.scale,
+          point2(e.clientX, e.clientY)
+        )
         this.translateNode(
           this.resetNodeMid.x - e.clientX,
           this.resetNodeMid.y - e.clientY
@@ -224,7 +239,7 @@ export default class PanZoomController {
     if (this.penDownStart === null) return false
     const dx = clientX - this.penDownStart.x
     const dy = clientY - this.penDownStart.y
-    return dx * dx + dy * dy < this.TAP_DEADZONE ** 2
+    return dx * dx + dy * dy < TAP_DEADZONE ** 2
   }
 
   /*** TOUCH drag & pan & zoom ***/
@@ -354,7 +369,7 @@ export default class PanZoomController {
     if (this.touchDownStart === null || this.touch2 !== null) return false
     const dx = clientX - this.touchDownStart.x
     const dy = clientY - this.touchDownStart.y
-    return dx * dx + dy * dy < this.TAP_DEADZONE ** 2
+    return dx * dx + dy * dy < TAP_DEADZONE ** 2
   }
 
   /*** WHEEL zoom & pan ***/
@@ -368,6 +383,7 @@ export default class PanZoomController {
   private lastMagY: number = -1
 
   private wheelHandler = (e: WheelEvent) => {
+    this.node.style.transitionDuration = FAST_TRANSITION
     const dx_px = normalizeWheelDelta(e.deltaX, e.deltaMode)
     const dy_px = normalizeWheelDelta(e.deltaY, e.deltaMode)
     const magX = Math.abs(dx_px)
@@ -388,7 +404,11 @@ export default class PanZoomController {
     )
     const wheel = wheelX || wheelY
 
-    // start of new scroll
+    // new scroll, recheck container position
+    if (e.timeStamp - this.lastWheelTime > this.WHEEL_BREAK_TIME_MS) {
+      this.trackContainerMoved()
+    }
+    // wheel or start of new scroll
     if (wheel || e.timeStamp - this.lastWheelTime > this.WHEEL_BREAK_TIME_MS) {
       if (magX > 0) this.lastMagX = magX
       if (magY > 0) this.lastMagY = magY
@@ -460,14 +480,14 @@ export default class PanZoomController {
   private translateNode = (dx: number, dy: number) => {
     const bx =
       Math.max(
-        this.containerBounds.x - this.scaled(this.nodeBounds.x),
-        this.scaled(this.nodeBounds.x)
-      ) - this.DEFAULT_PADDING
+        this.containerBounds.x - this.numScaled(this.nodeBounds.x),
+        this.numScaled(this.nodeBounds.x) - this.containerBounds.x / 2.0
+      ) - DEFAULT_PADDING
     const by =
       Math.max(
-        this.containerBounds.y - this.scaled(this.nodeBounds.y),
-        this.scaled(this.nodeBounds.y)
-      ) - this.DEFAULT_PADDING
+        this.containerBounds.y - this.numScaled(this.nodeBounds.y),
+        this.numScaled(this.nodeBounds.y) - this.containerBounds.y / 2.0
+      ) - DEFAULT_PADDING
     const clampdx = clamp(this.translate.x + dx, -bx, bx) - this.translate.x
     const clampdy = clamp(this.translate.y + dy, -by, by) - this.translate.y
     this.translate.x = this.translate.x + clampdx
@@ -478,7 +498,7 @@ export default class PanZoomController {
   }
 
   private scaleNode = (factor: number) => {
-    this.scale = clamp(this.scale * factor, this.MIN_ZOOM, this.MAX_ZOOM)
+    this.scale = clamp(this.scale * factor, this.min_zoom, this.max_zoom)
     this._scaleElementCSS(this.scale)
   }
 
@@ -490,8 +510,10 @@ export default class PanZoomController {
 
     // translate
     this.translateNode(
-      (this.nodeMid.x - origin.x) * scaled + origin.x - this.nodeMid.x,
-      (this.nodeMid.y - origin.y) * scaled + origin.y - this.nodeMid.y
+      (this.nodeMid.x - (origin.x + this.containerOffset.x)) * scaled +
+        (origin.x + this.containerOffset.x - this.nodeMid.x),
+      (this.nodeMid.y - (origin.y + this.containerOffset.y)) * scaled +
+        (origin.y + this.containerOffset.y - this.nodeMid.y)
     )
   }
 
@@ -499,11 +521,11 @@ export default class PanZoomController {
     if (dragging) {
       this.drag = true
       document.body.classList.add('nodrag')
-      this.node.style.transitionProperty = 'none'
+      this.node.style.transitionProperty = DRAG_TRANSITION_PROP
     } else {
       this.drag = false
       document.body.classList.remove('nodrag')
-      this.node.style.transitionProperty = 'scale, translate'
+      this.node.style.transitionProperty = NO_DRAG_TRANSITION_PROP
     }
   }
 
@@ -525,10 +547,23 @@ export default class PanZoomController {
     window.removeEventListener('pointercancel', dragStopHandler)
   }
 
-  private scaled = (n: number) => n * this.initScale * this.scale
+  private numScaled = (n: number) => n * this.initScale * this.scale
+
+  private trackContainerMoved = () => {
+    const containerRect = this.container.getBoundingClientRect()
+    this.containerOffset = point2(
+      this.containerPos.x - containerRect.x,
+      this.containerPos.y - containerRect.y
+    )
+  }
 }
 
 // utils
+
+export const NO_DRAG_TRANSITION_PROP = 'opacity, scale, translate'
+export const DRAG_TRANSITION_PROP = 'none'
+export const SLOW_TRANSITION = '500ms'
+export const FAST_TRANSITION = '150ms'
 
 type PointerEventHandler = (e: PointerEvent) => void
 type pointerEventDetails = {
