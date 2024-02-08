@@ -4,8 +4,8 @@ import SpaceContent from './SpaceContent'
 import SpaceWrapper from './SpaceWrapper'
 
 const testSpace = {
-  wid: 10,
-  hgt: 8,
+  wid: 20,
+  hgt: 16,
 }
 
 const Space = () => {

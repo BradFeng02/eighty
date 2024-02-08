@@ -30,8 +30,9 @@ export default class PanZoomController {
     container: RefObject<HTMLDivElement>,
     node: RefObject<HTMLDivElement>
   ) {
-    if (!container.current) throw new Error('mouse target was not mounted?')
-    if (!node.current) throw new Error('pan zoom node was not mounted?')
+    if (!container.current)
+      throw new Error('Space - mouse target was not mounted?')
+    if (!node.current) throw new Error('Space - pan zoom node was not mounted?')
     this.container = container.current
     this.node = node.current
 
@@ -40,8 +41,8 @@ export default class PanZoomController {
 
     this.containerPos = point2(containerRect.x, containerRect.y)
     this.nodeMid = point2(
-      (nodeRect.left + nodeRect.right) / 2.0,
-      (nodeRect.top + nodeRect.bottom) / 2.0
+      (containerRect.left + containerRect.right) / 2.0,
+      (containerRect.top + containerRect.bottom) / 2.0
     )
     this.resetNodeMid = point2(this.nodeMid.x, this.nodeMid.y)
 
@@ -51,10 +52,8 @@ export default class PanZoomController {
     )
 
     this.node.style.transform = `scale(${this.initScale})`
-    this.max_zoom =
-      Math.max(nodeRect.width, nodeRect.height) / (GRID_SIZE_PX * 4)
-    this.target_zoom =
-      Math.max(nodeRect.width, nodeRect.height) / (GRID_SIZE_PX * 8)
+    this.max_zoom = Math.max(3.0 / this.initScale, 2)
+    this.target_zoom = Math.max(2.0 / this.initScale, 1.3)
 
     this.nodeBounds = point2(nodeRect.width / 2.0, nodeRect.height / 2.0)
     this.containerBounds = point2(
@@ -66,6 +65,43 @@ export default class PanZoomController {
   /*****
    *****    PUBLIC METHODS
    *****/
+
+  readonly resize = () => {
+    this.node.style.transitionDuration = '0s'
+    const prevTranslate = point2(this.translate.x, this.translate.y)
+    const prevInitScale = this.initScale
+    this.containerOffset = point2(0, 0)
+    this.translate = point2(0, 0)
+
+    const containerRect = this.container.getBoundingClientRect()
+    const nodeRect = {
+      width: this.nodeBounds.x * 2,
+      height: this.nodeBounds.y * 2,
+    }
+
+    this.nodeMid = point2(
+      (containerRect.left + containerRect.right) / 2.0,
+      (containerRect.top + containerRect.bottom) / 2.0
+    )
+    this.resetNodeMid = point2(this.nodeMid.x, this.nodeMid.y)
+
+    this.initScale = Math.min(
+      (containerRect.width - DEFAULT_PADDING * 2) / nodeRect.width,
+      (containerRect.height - DEFAULT_PADDING * 2) / nodeRect.height
+    )
+
+    this.node.style.transform = `scale(${this.initScale})`
+    this.max_zoom = Math.max(3.0 / this.initScale, 2)
+    this.target_zoom = Math.max(2.0 / this.initScale, 1.3)
+
+    this.containerBounds = point2(
+      containerRect.width / 2.0,
+      containerRect.height / 2.0
+    )
+
+    this.scaleNode(prevInitScale / this.initScale)
+    this.translateNode(prevTranslate.x, prevTranslate.y)
+  }
 
   readonly registerListeners = () => {
     this.container.addEventListener('wheel', this.wheelHandler, {
@@ -82,6 +118,7 @@ export default class PanZoomController {
     this.setDragging(false)
     this.node.style.transform = ''
     this.node.style.transitionDuration = FAST_TRANSITION
+    this.node.style.transitionTimingFunction = FAST_TIMING
   }
 
   /*****
@@ -92,6 +129,7 @@ export default class PanZoomController {
     this.trackContainerMoved()
     let doubletap = false
     this.node.style.transitionDuration = FAST_TRANSITION
+    this.node.style.transitionTimingFunction = FAST_TIMING
 
     switch (e.pointerType) {
       case 'mouse':
@@ -131,6 +169,7 @@ export default class PanZoomController {
         DOUBLE_TAP_DEADZONE ** 2
     ) {
       this.node.style.transitionDuration = SLOW_TRANSITION
+      this.node.style.transitionTimingFunction = SLOW_TIMING
       // reset zoom if zoomed in/out, scale 2 otherwise
       if (this.scale != 1 || !pt2Equals(this.nodeMid, this.resetNodeMid)) {
         this.translateNode(
@@ -384,6 +423,7 @@ export default class PanZoomController {
 
   private wheelHandler = (e: WheelEvent) => {
     this.node.style.transitionDuration = FAST_TRANSITION
+    this.node.style.transitionTimingFunction = FAST_TIMING
     const dx_px = normalizeWheelDelta(e.deltaX, e.deltaMode)
     const dy_px = normalizeWheelDelta(e.deltaY, e.deltaMode)
     const magX = Math.abs(dx_px)
@@ -564,6 +604,8 @@ export const NO_DRAG_TRANSITION_PROP = 'opacity, scale, translate'
 export const DRAG_TRANSITION_PROP = 'none'
 export const SLOW_TRANSITION = '500ms'
 export const FAST_TRANSITION = '150ms'
+export const SLOW_TIMING = 'ease'
+export const FAST_TIMING = 'cubic-bezier(0, 0, 0.2, 1)'
 
 type PointerEventHandler = (e: PointerEvent) => void
 type pointerEventDetails = {

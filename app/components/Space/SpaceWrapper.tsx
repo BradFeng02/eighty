@@ -1,5 +1,6 @@
 import { useEffect, useRef, ReactNode, useState } from 'react'
 import PanZoomController, {
+  FAST_TIMING,
   FAST_TRANSITION,
   NO_DRAG_TRANSITION_PROP,
 } from './pan_zoom_logic'
@@ -18,11 +19,15 @@ const SpaceWrapper = ({ wid, hgt, children }: Props) => {
 
   // mount & unmount
   useEffect(() => {
-    const controller = new PanZoomController(container, wrapper)
+    let controller = new PanZoomController(container, wrapper)
     controller.registerListeners()
     setOpacity(1)
 
+    const resizeObserver = new ResizeObserver(() => controller.resize())
+    if (container.current) resizeObserver.observe(container.current)
+
     return () => {
+      resizeObserver.disconnect()
       controller.destroy()
     }
   }, [])
@@ -34,13 +39,14 @@ const SpaceWrapper = ({ wid, hgt, children }: Props) => {
     >
       <div
         ref={wrapper}
-        className={`relative bg-white ease-out`}
+        className={`relative bg-white`}
         style={{
           width: wid * GRID_SIZE_PX,
           height: hgt * GRID_SIZE_PX,
           left: `calc((100% - ${wid * GRID_SIZE_PX}px) / 2.0)`,
           top: `calc((100% - ${hgt * GRID_SIZE_PX}px) / 2.0)`,
           transitionDuration: FAST_TRANSITION,
+          transitionTimingFunction: FAST_TIMING,
           transitionProperty: NO_DRAG_TRANSITION_PROP,
           opacity: opacity,
         }}

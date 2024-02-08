@@ -17,9 +17,7 @@ export default function RootLayout({
         <p>
           test for scroll <br /> (im in layout)
         </p>
-        <div className="flex h-screen w-screen items-center justify-center">
-          {children}
-        </div>
+        <div className="h-screen w-screen pl-8">{children}</div>
       </body>
     </html>
   )
