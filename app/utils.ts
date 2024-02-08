@@ -1,6 +1,26 @@
 import { Atkinson_Hyperlegible } from 'next/font/google'
 
-// usage: <className={AKHyper.className}>
+export type Point2 = {
+  x: number
+  y: number
+}
+
+export type RefVal<T> = {
+  val: T
+}
+
+export const refVal = <T>(val: T) => ({ val })
+
+export const point2 = (x: number, y: number) => ({ x, y })
+
+export const movePt2 = (from: Point2, dx: number, dy: number) =>
+  point2(from.x + dx, from.y + dy)
+
+export const pt2Equals = (a: Point2, b: Point2) => {
+  return a.x === b.x && a.y === b.y
+}
+
+// usage: <className={AKHyper.className}
 export const AKHyper = Atkinson_Hyperlegible({
   weight: ['400', '700'],
   style: ['normal', 'italic'],
@@ -8,3 +28,6 @@ export const AKHyper = Atkinson_Hyperlegible({
   preload: true,
   subsets: ['latin-ext'],
 })
+
+export const clamp = (n: number, min: number, max: number) =>
+  Math.min(Math.max(n, min), max)

@@ -13,7 +13,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <p>
+          test for scroll <br /> (im in layout)
+        </p>
+        <div className="h-screen w-screen pl-8">{children}</div>
+      </body>
     </html>
   )
 }
