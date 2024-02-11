@@ -1,7 +1,7 @@
 'use client'
 
 import { ReactNode, useEffect, useState } from 'react'
-import { GRID_SIZE_PX } from '../Space/constants'
+import { BLOCK_PADDING, GRID_SIZE_PX } from '../Space/constants'
 
 type Props = {
   wid: number
@@ -16,19 +16,20 @@ const BlockWrapper = ({ wid, hgt, left, top, children }: Props) => {
 
   useEffect(() => {
     setColor(
-      `rgb(${Math.random() * 200 + 20}, ${Math.random() * 200 + 20}, ${Math.random() * 200 + 20})`
+      `rgb(${Math.random() * 150 + 100}, ${Math.random() * 150 + 100}, ${Math.random() * 150 + 100})`
     )
   }, [])
 
   return (
     <div
-      className="absolute"
+      className="pointer-events-auto absolute overflow-hidden"
       style={{
         width: wid * GRID_SIZE_PX,
         height: hgt * GRID_SIZE_PX,
         left: left * GRID_SIZE_PX,
         top: top * GRID_SIZE_PX,
         backgroundColor: color,
+        padding: BLOCK_PADDING,
       }}
     >
       {children}

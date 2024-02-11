@@ -26,3 +26,26 @@ body.nodrag {
     text-wrap: balance;
   }
 }
+
+.content-editable {
+  outline: none;
+  border-radius: 5px;
+}
+
+.content-editable:focus {
+  box-shadow: 0px 0px 3px rgba(255, 255, 255, 0.75);
+}
+
+.label-block.content-editable.show-placeholder:not(:focus)::after {
+  content: 'Label';
+  font-weight: bold;
+  position: absolute;
+  opacity: .5;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
