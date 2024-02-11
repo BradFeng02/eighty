@@ -133,7 +133,7 @@ export default class PanZoomController {
 
     switch (e.pointerType) {
       case 'mouse':
-        this.mouseDownHandler(e)
+        // this.mouseDownHandler(e)
         break
       case 'pen':
         doubletap = this.catchDoubleTap('pen', e)
@@ -422,6 +422,16 @@ export default class PanZoomController {
   private lastMagY: number = -1
 
   private wheelHandler = (e: WheelEvent) => {
+    if (
+      // extra window for not scrolling
+      e.timeStamp - this.lastWheelTime > this.WHEEL_BREAK_TIME_MS * 3 &&
+      !e.ctrlKey &&
+      e.target instanceof Element &&
+      e.target.classList.contains('scrollable')
+    ) {
+      return
+    }
+
     this.node.style.transitionDuration = FAST_TRANSITION
     this.node.style.transitionTimingFunction = FAST_TIMING
     const dx_px = normalizeWheelDelta(e.deltaX, e.deltaMode)
@@ -443,13 +453,15 @@ export default class PanZoomController {
       e.timeStamp
     )
     const wheel = wheelX || wheelY
+    const newScroll =
+      e.timeStamp - this.lastWheelTime > this.WHEEL_BREAK_TIME_MS
 
     // new scroll, recheck container position
-    if (e.timeStamp - this.lastWheelTime > this.WHEEL_BREAK_TIME_MS) {
+    if (newScroll) {
       this.trackContainerMoved()
     }
     // wheel or start of new scroll
-    if (wheel || e.timeStamp - this.lastWheelTime > this.WHEEL_BREAK_TIME_MS) {
+    if (wheel || newScroll) {
       if (magX > 0) this.lastMagX = magX
       if (magY > 0) this.lastMagY = magY
     }
