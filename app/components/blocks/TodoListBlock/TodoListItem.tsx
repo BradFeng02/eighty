@@ -88,7 +88,7 @@ const TodoListItem = ({ task }: Props) => {
   return (
     <li className="mb-[5px]">
       <div className="flex items-center gap-[5px]">
-        <div className="w-[18px]">
+        <div className="w-[18px] min-w-[18px]">
           <input
             className="align-middle"
             type="checkbox"

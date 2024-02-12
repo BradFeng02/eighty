@@ -28,6 +28,7 @@ import {
 import TodoListItem from './TodoListItem'
 import styles from './TodoList.module.css'
 import { eightyTask, newEightyTask } from '@/app/datatypes'
+import { PlusIcon } from '@/app/icons'
 
 const theme: EditorThemeClasses = {
   paragraph: 'h-min',
@@ -70,6 +71,8 @@ const TodoList = () => {
             $setSelection(null)
             $selectAll()
           })
+        } else {
+          editor.focus()
         }
         return true
       },
@@ -115,9 +118,9 @@ const TodoList = () => {
           <TodoListItem task={t} key={i} />
         ))}
       </ol>
-      <div className="flex gap-[5px]">
+      <div className="flex items-center gap-[5px]">
         <div
-          className="w-[18px] select-none"
+          className="w-[18px] min-w-[18px] select-none"
           style={{ opacity: insertPlaceholder ? 0.5 : 1 }}
           onClick={() => {
             editorRef.current?.dispatchCommand(
@@ -126,7 +129,7 @@ const TodoList = () => {
             )
           }}
         >
-          +
+          <div className="h-[15px] w-[15px] text-black">{PlusIcon}</div>
         </div>
         <div className="relative flex-grow">
           <LexicalComposer initialConfig={initialConfig}>
