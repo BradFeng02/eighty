@@ -4,7 +4,8 @@
 
 :root {
   --sys-font: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif,
-    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+  'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+  --border-edit: 1px;
 }
 
 body {
@@ -29,11 +30,28 @@ body.nodrag {
 
 .content-editable {
   outline: none;
-  border-radius: 5px;
+  border-radius: 1px;
+  transition: box-shadow 200ms linear, border 200ms linear;
+  border: var(--border-edit) solid transparent;
+}
+
+.content-editable:hover {
+  border: var(--border-edit) solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0px 0px 2px rgba(255, 255, 255, .5);
+  transition: none;
 }
 
 .content-editable:focus {
-  box-shadow: 0px 0px 3px rgba(255, 255, 255, 0.75);
+  border: var(--border-edit) solid rgba(255, 255, 255, .75);
+  box-shadow: 0px 0px 3px rgba(255, 255, 255, 1);
+  transition: none;
+}
+
+.editable-placeholder {
+  border: var(--border-edit) solid transparent;
+  opacity: .5;
+  pointer-events: none;
+  user-select: none;
 }
 
 .label-block.content-editable.show-placeholder:not(:focus)::after {
@@ -48,4 +66,11 @@ body.nodrag {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.todolist-block.content-editable.show-placeholder:not(:focus)::after {
+  content: 'Title';
+  position: absolute;
+  opacity: .5;
+  top: var(--border-edit);
 }

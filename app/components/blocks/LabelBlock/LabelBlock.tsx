@@ -36,7 +36,7 @@ const onError = (error: Error) => {
 
 const theme: EditorThemeClasses = {
   heading: {
-    h1: 'label-block-heading',
+    h1: 'h-min',
   },
   text: {
     base: 'font-bold',
@@ -129,7 +129,6 @@ const LabelBlock = (props: Props) => {
                 className={`content-editable label-block w-full${placeholder ? ' show-placeholder' : ''}`}
                 style={{
                   fontSize: fontSize + 'px',
-                  lineHeight: fontSize * 1.3 + 'px',
                   scale: `1 ${squish}`,
                 }}
               />
