@@ -101,7 +101,7 @@ const TodoListBlock = (props: Props) => {
 
   return (
     <BlockWrapper {...props}>
-      <div className="flex h-full flex-col" style={{ gap: '10px' }}>
+      <div className="flex h-full flex-col gap-[10px]">
         {showTitle && (
           <div className="relative">
             <LexicalComposer initialConfig={titleInitialConfig}>

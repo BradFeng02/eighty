@@ -86,13 +86,9 @@ const TodoListItem = ({ task }: Props) => {
   }
 
   return (
-    <li
-      style={{
-        marginBottom: '5px',
-      }}
-    >
-      <div className="flex items-center" style={{ gap: '5px' }}>
-        <div className="" style={{ width: '18px' }}>
+    <li className="mb-[5px]">
+      <div className="flex items-center gap-[5px]">
+        <div className="w-[18px]">
           <input
             className="align-middle"
             type="checkbox"

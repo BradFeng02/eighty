@@ -109,19 +109,16 @@ const TodoList = () => {
   }
 
   return (
-    <div
-      className="scrollable flex-grow overflow-scroll border-t-2 border-white"
-      style={{ paddingTop: '5px' }}
-    >
+    <div className="scrollable flex-grow overflow-scroll border-t-2 border-white pt-[5px]">
       <ol>
         {tasks.map((t, i) => (
           <TodoListItem task={t} key={i} />
         ))}
       </ol>
-      <div className="flex" style={{ gap: '5px' }}>
+      <div className="flex gap-[5px]">
         <div
-          className="select-none"
-          style={{ opacity: insertPlaceholder ? 0.5 : 1, width: '18px' }}
+          className="w-[18px] select-none"
+          style={{ opacity: insertPlaceholder ? 0.5 : 1 }}
           onClick={() => {
             editorRef.current?.dispatchCommand(
               INSERT_PARAGRAPH_COMMAND,

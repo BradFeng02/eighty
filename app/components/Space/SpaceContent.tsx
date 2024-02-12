@@ -8,8 +8,7 @@ import TodoListBlock from '../blocks/TodoListBlock/TodoListBlock'
 const SpaceContent = () => {
   return (
     <div
-      className={`${AKHyper.className} relative h-full w-full`}
-      style={{ lineHeight: 1.3 }}
+      className={`${AKHyper.className} relative h-full w-full leading-[1.3]`}
     >
       <TodoListBlock wid={3} hgt={5} left={1} top={1}></TodoListBlock>
       <LabelBlock wid={4} hgt={1} left={0} top={0}></LabelBlock>
