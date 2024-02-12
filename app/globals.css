@@ -47,9 +47,9 @@ body.nodrag {
   transition: none;
 }
 
-.editable-placeholder {
-  border: var(--border-edit) solid transparent;
-  opacity: .5;
+/* PLACEHOLDERS */
+
+.content-editable.show-placeholder:not(:focus)::after {
   pointer-events: none;
   user-select: none;
 }
@@ -70,6 +70,13 @@ body.nodrag {
 
 .todolist-block.content-editable.show-placeholder:not(:focus)::after {
   content: 'Title';
+  position: absolute;
+  opacity: .5;
+  top: var(--border-edit);
+}
+
+.todolist-insert.content-editable.show-placeholder:not(:focus)::after {
+  content: 'New task';
   position: absolute;
   opacity: .5;
   top: var(--border-edit);
