@@ -24,6 +24,7 @@ import {
   $createParagraphNode,
 } from 'lexical'
 import { eightyTask } from '@/app/datatypes'
+import { useState } from 'react'
 
 type Props = {
   task: eightyTask
@@ -40,6 +41,7 @@ const theme: EditorThemeClasses = {
 
 const TodoListItem = ({ task }: Props) => {
   const fontSize = 16
+  const [checked, setChecked] = useState(task.checked)
 
   const initialEditorState = (editor: LexicalEditor) => {
     // const p = $createParagraphNode()
@@ -92,7 +94,10 @@ const TodoListItem = ({ task }: Props) => {
           <input
             className="align-middle"
             type="checkbox"
-            defaultChecked={task.checked}
+            checked={checked}
+            onChange={() => {
+              setChecked((c) => !c)
+            }}
           ></input>
         </div>
 
@@ -104,6 +109,9 @@ const TodoListItem = ({ task }: Props) => {
                   className={`content-editable todolist-insert w-full`}
                   style={{
                     fontSize: fontSize + 'px',
+                    textDecoration: checked ? 'line-through' : undefined,
+                    // color: checked ? 'rgba(50, 50, 50, .5)' : undefined,
+                    opacity: checked ? 0.6 : undefined,
                   }}
                 />
               }

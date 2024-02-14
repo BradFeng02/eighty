@@ -136,7 +136,7 @@ const TodoList = () => {
             <RichTextPlugin
               contentEditable={
                 <ContentEditable
-                  className={`content-editable todolist-insert w-full${insertPlaceholder ? ' show-placeholder' : ''}`}
+                  className={`content-editable todolist-insert hideline w-full${insertPlaceholder ? ' show-placeholder' : ''}`}
                   style={{
                     fontSize: insertFontSize + 'px',
                   }}
