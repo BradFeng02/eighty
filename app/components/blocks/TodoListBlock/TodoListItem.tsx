@@ -7,24 +7,20 @@ import {
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin'
 import { ContentEditable } from '@lexical/react/LexicalContentEditable'
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin'
-import { EditorRefPlugin } from '@lexical/react/LexicalEditorRefPlugin'
 import LexicalErrorBoundary from '@lexical/react/LexicalErrorBoundary'
-import { $createHeadingNode, HeadingNode } from '@lexical/rich-text'
+import { HeadingNode } from '@lexical/rich-text'
 import {
-  $getRoot,
   $getSelection,
-  $selectAll,
   COMMAND_PRIORITY_EDITOR,
   EditorThemeClasses,
-  FORMAT_TEXT_COMMAND,
   INSERT_PARAGRAPH_COMMAND,
   INSERT_LINE_BREAK_COMMAND,
   LexicalEditor,
-  ParagraphNode,
-  $createParagraphNode,
+  EditorState,
+  BLUR_COMMAND,
 } from 'lexical'
 import { eightyTask } from '@/app/datatypes'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 type Props = {
   task: eightyTask
@@ -42,14 +38,14 @@ const theme: EditorThemeClasses = {
 const TodoListItem = ({ task }: Props) => {
   const fontSize = 16
   const [checked, setChecked] = useState(task.checked)
+  const contentRef = useRef<EditorState>()
 
   const initialEditorState = (editor: LexicalEditor) => {
-    // const p = $createParagraphNode()
-    // $getRoot().append(p)
-    // $selectAll()
-    editor.setEditorState(editor.parseEditorState(task.contentState))
+    const initState = editor.parseEditorState(task.contentState)
+    editor.setEditorState(initState)
+    contentRef.current = initState
 
-    // submit task, single line
+    // single line
     editor.registerCommand(
       INSERT_PARAGRAPH_COMMAND,
       (payload: void, editor: LexicalEditor) => {
@@ -64,19 +60,35 @@ const TodoListItem = ({ task }: Props) => {
       COMMAND_PRIORITY_EDITOR
     )
 
-    // empty
-    // editor.registerRootListener((rootElement: null | HTMLElement) => {
-    //   if (rootElement) editorRoot.current = rootElement
-    // })
-    // editor.registerUpdateListener(({ editorState }) => {
-    //   editorState.read(() => {
-    //     const nodes = $getSelection()?.getNodes()
-    //     if (editorRoot.current)
-    //       setinsertPlaceholder(
-    //         !!(nodes && nodes.length == 1 && nodes[0].getType() === 'paragraph')
-    //       )
-    //   })
-    // })
+    editor.registerCommand(
+      BLUR_COMMAND,
+      (payload: FocusEvent, editor: LexicalEditor) => {
+        const newstate = editor.getEditorState()
+        newstate.read(() => {
+          const nodes = $getSelection()?.getNodes()
+          // if empty
+          if (
+            nodes &&
+            nodes.length == 1 &&
+            nodes[0].getType() === 'paragraph'
+          ) {
+            if (contentRef.current) editor.setEditorState(contentRef.current)
+            editor.blur()
+          } else {
+            // if not same
+            if (
+              JSON.stringify(contentRef.current) !== JSON.stringify(newstate)
+            ) {
+              contentRef.current = newstate
+              // save new state here
+            }
+          }
+        })
+
+        return false
+      },
+      COMMAND_PRIORITY_EDITOR
+    )
   }
 
   const initialConfig: InitialConfigType = {
