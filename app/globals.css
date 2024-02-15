@@ -5,6 +5,7 @@
 :root {
   --sys-font: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif,
     'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+  --border-edit: 1px;
 }
 
 body {
@@ -29,18 +30,54 @@ body.nodrag {
 
 .content-editable {
   outline: none;
-  border-radius: 5px;
+  border-radius: 1px;
+  transition:
+    box-shadow 200ms linear,
+    border 200ms linear;
+  border: var(--border-edit) solid transparent;
+}
+
+.content-editable:hover {
+  border: var(--border-edit) solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0px 0px 2px rgba(255, 255, 255, 0.5);
+  transition: none;
 }
 
 .content-editable:focus {
-  box-shadow: 0px 0px 3px rgba(255, 255, 255, 0.75);
+  border: var(--border-edit) solid rgba(255, 255, 255, 0.75);
+  box-shadow: 0px 0px 3px rgba(255, 255, 255, 1);
+  transition: none;
+}
+
+/* PLACEHOLDERS */
+
+.content-editable.show-placeholder:not(.hideline):before {
+  content: '';
+  pointer-events: none;
+  user-select: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: calc(100% - (2 * var(--border-edit)));
+  width: calc(100% - (2 * var(--border-edit)));
+  margin: var(--border-edit);
+  border-bottom: 2px solid transparent;
+}
+
+.content-editable.show-placeholder:not(.hideline):not(:focus):before {
+  border-bottom: 2px solid rgb(0, 0, 0, 0.3);
+}
+
+.content-editable.show-placeholder:not(:focus)::after {
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.35;
 }
 
 .label-block.content-editable.show-placeholder:not(:focus)::after {
   content: 'Label';
   font-weight: bold;
   position: absolute;
-  opacity: .5;
   top: 0;
   left: 0;
   height: 100%;
@@ -48,4 +85,16 @@ body.nodrag {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.todolist-block.content-editable.show-placeholder:not(:focus)::after {
+  content: 'Title';
+  position: absolute;
+  top: var(--border-edit);
+}
+
+.todolist-insert.content-editable.show-placeholder:not(:focus)::after {
+  content: 'New task';
+  position: absolute;
+  top: var(--border-edit);
 }

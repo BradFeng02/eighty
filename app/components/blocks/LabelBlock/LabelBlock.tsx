@@ -30,13 +30,9 @@ type Props = {
   top: number
 }
 
-const onError = (error: Error) => {
-  console.error(`Label: Lexical - ${error}`)
-}
-
 const theme: EditorThemeClasses = {
   heading: {
-    h1: 'label-block-heading',
+    h1: 'h-min',
   },
   text: {
     base: 'font-bold',
@@ -114,7 +110,7 @@ const LabelBlock = (props: Props) => {
   const initialConfig: InitialConfigType = {
     namespace: 'LabelBlock',
     theme,
-    onError,
+    onError: (err) => console.error(`LabelBlock: Lexical - ${err}`),
     editorState: initialEditorState,
     nodes: [HeadingNode],
   }
@@ -129,7 +125,6 @@ const LabelBlock = (props: Props) => {
                 className={`content-editable label-block w-full${placeholder ? ' show-placeholder' : ''}`}
                 style={{
                   fontSize: fontSize + 'px',
-                  lineHeight: fontSize * 1.3 + 'px',
                   scale: `1 ${squish}`,
                 }}
               />

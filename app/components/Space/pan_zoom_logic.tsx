@@ -427,7 +427,7 @@ export default class PanZoomController {
       e.timeStamp - this.lastWheelTime > this.WHEEL_BREAK_TIME_MS * 3 &&
       !e.ctrlKey &&
       e.target instanceof Element &&
-      e.target.classList.contains('scrollable')
+      !!e.target.closest('.scrollable')
     ) {
       return
     }
