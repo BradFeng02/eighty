@@ -118,7 +118,7 @@ const TodoListItem = ({ task }: Props) => {
             <RichTextPlugin
               contentEditable={
                 <ContentEditable
-                  className={`content-editable todolist-insert w-full`}
+                  className={`content-editable w-full`}
                   style={{
                     fontSize: fontSize + 'px',
                     textDecoration: checked ? 'line-through' : undefined,
