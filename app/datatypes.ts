@@ -1,7 +1,7 @@
 export type eightyTask = {
   contentState: string
   checked: boolean
-  subtasksState: string | undefined
+  subtasksState?: string
 }
 
 export const newEightyTask = (
