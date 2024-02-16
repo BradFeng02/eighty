@@ -21,7 +21,7 @@ import {
 } from 'lexical'
 import { CSSProperties, ReactNode, useEffect, useRef, useState } from 'react'
 
-type InitConfigReduced = {
+export type InitialConfigReduced = {
   nodes?: ReadonlyArray<Klass<LexicalNode> | LexicalNodeReplacement>
   onError?: (error: Error, editor: LexicalEditor) => void
   editable?: boolean
@@ -29,30 +29,34 @@ type InitConfigReduced = {
   html?: HTMLConfig
 }
 
+export type RegisterCommand = <P>(
+  command: LexicalCommand<P>,
+  listener: (editor: LexicalEditor, payload: P) => boolean,
+  priority?: CommandListenerPriority
+) => void
+
+export type CustomInitializeState = (
+  editor: LexicalEditor,
+  register: RegisterCommand
+) => void
+
 type Props = {
   namespace: string
   placeholder?: string
-  initConfig: InitConfigReduced
-  customInitConfig: (
-    editor: LexicalEditor,
-    register: <P>(
-      command: LexicalCommand<P>,
-      listener: (editor: LexicalEditor, payload: P) => boolean,
-      priority?: CommandListenerPriority
-    ) => void
-  ) => void
+  initialConfig: InitialConfigReduced
+  customInitState?: CustomInitializeState
   contentStyle?: CSSProperties
-  singleLine: boolean
-  singleParagraph: boolean
+  singleLine?: boolean
+  singleParagraph?: boolean
   onSubmit?: (editor: LexicalEditor) => void
   children: ReactNode
 }
 
-const LexicalRich = ({
+const RichLexical = ({
   namespace,
   placeholder,
-  initConfig,
-  customInitConfig,
+  initialConfig: initConfig,
+  customInitState,
   contentStyle,
   singleLine = false,
   singleParagraph = false,
@@ -73,7 +77,7 @@ const LexicalRich = ({
   // lexical initial editor state
   const initialEditorState = (editor: LexicalEditor) => {
     // custom initial config code, with register command helper
-    customInitConfig(
+    customInitState?.(
       editor,
       (command, listener, priority = COMMAND_PRIORITY_EDITOR) => {
         editor.registerCommand(
@@ -141,4 +145,4 @@ const LexicalRich = ({
   )
 }
 
-export default LexicalRich
+export default RichLexical
