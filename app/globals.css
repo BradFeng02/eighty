@@ -51,6 +51,7 @@ body.nodrag {
 
 /* PLACEHOLDERS */
 
+/* placeholder line*/
 .content-editable.show-placeholder:not(.hideline):before {
   content: '';
   pointer-events: none;
@@ -68,33 +69,30 @@ body.nodrag {
   border-bottom: 2px solid rgb(0, 0, 0, 0.3);
 }
 
+/* placeholder text */
+
+/* general */
 .content-editable.show-placeholder:not(:focus)::after {
   pointer-events: none;
   user-select: none;
   opacity: 0.35;
+  position: absolute;
+  top: var(--border-edit);
+  width: calc(100% - 2 * var(--border-edit));
 }
+
+/* class specific */
 
 .label-block.content-editable.show-placeholder:not(:focus)::after {
   content: 'Label';
   font-weight: bold;
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  text-align: center;
 }
 
 .todolist-block.content-editable.show-placeholder:not(:focus)::after {
   content: 'Title';
-  position: absolute;
-  top: var(--border-edit);
 }
 
 .todolist-insert.content-editable.show-placeholder:not(:focus)::after {
   content: 'New task';
-  position: absolute;
-  top: var(--border-edit);
 }

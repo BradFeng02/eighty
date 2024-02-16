@@ -117,23 +117,34 @@ const LabelBlock = (props: Props) => {
 
   return (
     <BlockWrapper {...props}>
-      <div ref={block} className="flex h-full items-center">
-        <LexicalComposer initialConfig={initialConfig}>
-          <RichTextPlugin
-            contentEditable={
-              <ContentEditable
-                className={`content-editable label-block w-full${placeholder ? ' show-placeholder' : ''}`}
-                style={{
-                  fontSize: fontSize + 'px',
-                  scale: `1 ${squish}`,
-                }}
-              />
-            }
-            placeholder={null}
-            ErrorBoundary={LexicalErrorBoundary}
-          />
-          <HistoryPlugin />
-        </LexicalComposer>
+      <div
+        ref={block}
+        className="flex h-full w-full items-center overflow-visible"
+        // className="flex h-full items-center"
+      >
+        <div
+          className="relative w-full"
+          style={{
+            scale: `1 ${squish}`,
+          }}
+        >
+          <LexicalComposer initialConfig={initialConfig}>
+            <RichTextPlugin
+              contentEditable={
+                <ContentEditable
+                  className={`content-editable label-block w-full${placeholder ? ' show-placeholder' : ''}`}
+                  style={{
+                    fontSize: fontSize + 'px',
+                    // scale: `1 ${squish}`,
+                  }}
+                />
+              }
+              placeholder={null}
+              ErrorBoundary={LexicalErrorBoundary}
+            />
+            <HistoryPlugin />
+          </LexicalComposer>
+        </div>
       </div>
     </BlockWrapper>
   )
