@@ -58,7 +58,7 @@ const TodoListItem = ({ task }: Props) => {
     },
   }
 
-  const initialConfig: InitialConfigReduced = {
+  const initConfig: InitialConfigReduced = {
     theme,
     nodes: [HeadingNode],
   }
@@ -80,7 +80,7 @@ const TodoListItem = ({ task }: Props) => {
         <div className="relative flex-grow">
           <RichLexical
             namespace="TodoListItem"
-            initialConfig={initialConfig}
+            initConfig={initConfig}
             customInitState={initState}
             contentStyle={{
               fontSize: fontSize + 'px',

@@ -43,7 +43,7 @@ export type CustomInitializeState = (
 type Props = {
   namespace: string
   placeholder?: string
-  initialConfig: InitialConfigReduced
+  initConfig: InitialConfigReduced
   customInitState?: CustomInitializeState
   contentStyle?: CSSProperties
   singleLine?: boolean
@@ -55,7 +55,7 @@ type Props = {
 const RichLexical = ({
   namespace,
   placeholder,
-  initialConfig: initConfig,
+  initConfig,
   customInitState,
   contentStyle,
   singleLine = false,
