@@ -80,8 +80,12 @@ const RichLexical = ({
   // editor loaded (sometimes error setting show placeholder)
   const editorLoaded = useRef<boolean>(false)
   useEffect(() => {
+    const initShow = initialShow.current
+    setShowPlaceholder(initShow)
+    initialShow.current = false
     editorLoaded.current = true
     return () => {
+      initialShow.current = initShow
       editorLoaded.current = false
     }
   }, [])
