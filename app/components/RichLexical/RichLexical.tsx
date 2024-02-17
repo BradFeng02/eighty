@@ -51,6 +51,7 @@ type Props = {
   hideEmptyLine?: boolean
   initConfig: InitialConfigReduced
   customInitState?: CustomInitializeState
+  fontSize?: string
   contentStyle?: CSSProperties
   singleLine?: boolean
   singleParagraph?: boolean
@@ -66,6 +67,7 @@ const RichLexical = ({
   hideEmptyLine = false,
   initConfig,
   customInitState,
+  fontSize = 'inherit',
   contentStyle,
   singleLine = false,
   singleParagraph = false,
@@ -164,7 +166,7 @@ const RichLexical = ({
           contentEditable={
             <ContentEditable
               className={`w-full ${styles.contentEditable} ${placeholderLineClasses}`}
-              style={contentStyle}
+              style={{ fontSize, ...contentStyle }}
             />
           }
           placeholder={null}
@@ -175,6 +177,7 @@ const RichLexical = ({
       {placeholder && (
         <div
           className={`${placeholderClass} ${styles.placeholderText} ${showClass}`}
+          style={{ fontSize }}
         >
           {placeholder}
         </div>
