@@ -77,22 +77,22 @@ const TodoListItem = ({ task }: Props) => {
           ></input>
         </div>
 
-        <div className="relative flex-grow">
-          <RichLexical
-            namespace="TodoListItem"
-            initConfig={initConfig}
-            customInitState={initState}
-            contentStyle={{
-              fontSize: fontSize + 'px',
-              textDecoration: checked ? 'line-through' : undefined,
-              opacity: checked ? 0.6 : undefined,
-            }}
-            singleLine
-            singleParagraph
-          >
-            <HistoryPlugin />
-          </RichLexical>
-        </div>
+        <RichLexical
+          containerClass="flex-grow"
+          namespace="TodoListItem"
+          initConfig={initConfig}
+          customInitState={initState}
+          contentStyle={{
+            fontSize: fontSize + 'px',
+            textDecoration: checked ? 'line-through' : undefined,
+            opacity: checked ? 0.6 : undefined,
+          }}
+          singleLine
+          singleParagraph
+          hideEmptyLine
+        >
+          <HistoryPlugin />
+        </RichLexical>
       </div>
     </li>
   )

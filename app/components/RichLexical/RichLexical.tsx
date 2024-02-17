@@ -20,6 +20,11 @@ import {
   CommandListenerPriority,
 } from 'lexical'
 import { CSSProperties, ReactNode, useEffect, useRef, useState } from 'react'
+import styles from './RichLexical.module.css'
+
+interface VarStyle extends CSSProperties {
+  '--placeholder-text': string
+}
 
 export type InitialConfigReduced = {
   nodes?: ReadonlyArray<Klass<LexicalNode> | LexicalNodeReplacement>
@@ -43,27 +48,34 @@ export type CustomInitializeState = (
 type Props = {
   namespace: string
   placeholder?: string
+  hideEmptyLine?: boolean
   initConfig: InitialConfigReduced
   customInitState?: CustomInitializeState
   contentStyle?: CSSProperties
   singleLine?: boolean
   singleParagraph?: boolean
   onSubmit?: (editor: LexicalEditor) => void
+  placeholderClass?: string
+  containerClass?: string
   children: ReactNode
 }
 
 const RichLexical = ({
   namespace,
   placeholder,
+  hideEmptyLine = false,
   initConfig,
   customInitState,
   contentStyle,
   singleLine = false,
   singleParagraph = false,
   onSubmit,
+  placeholderClass = '',
+  containerClass = '',
   children,
 }: Props) => {
-  const [showPlaceholder, setShowPlaceholder] = useState(!!placeholder)
+  const [showPlaceholder, setShowPlaceholder] = useState(false)
+  const initialShow = useRef<boolean>(false)
 
   // editor loaded (sometimes error setting show placeholder)
   const editorLoaded = useRef<boolean>(false)
@@ -108,14 +120,14 @@ const RichLexical = ({
       )
     }
 
-    // empty placeholder
-    if (placeholder) {
+    // empty placeholder line or text
+    if (!hideEmptyLine || placeholder) {
       editor.registerUpdateListener(({ editorState }) => {
-        if (editorLoaded.current)
-          editorState.read(() => {
-            const empty = !$getRoot().getTextContentSize()
-            setShowPlaceholder(empty)
-          })
+        editorState.read(() => {
+          const empty = !$getRoot().getTextContentSize()
+          if (editorLoaded.current) setShowPlaceholder(empty)
+          else initialShow.current = empty
+        })
       })
     }
     /////
@@ -128,20 +140,42 @@ const RichLexical = ({
     ...initConfig,
   }
 
+  const placeholderStyle: VarStyle = {
+    '--placeholder-text': `"${placeholder}"`,
+  }
+
+  const show = initialShow.current || showPlaceholder
+  const showClass = show ? `${styles.show}` : ''
+  const placeholderLineClasses = hideEmptyLine
+    ? ''
+    : `${styles.placeholderLine} ${showClass}`
+
   return (
-    <LexicalComposer initialConfig={initialConfig}>
-      <RichTextPlugin
-        contentEditable={
-          <ContentEditable
-            className={`content-editable todolist-block w-full${showPlaceholder ? ' show-placeholder' : ''}`}
-            style={contentStyle}
-          />
-        }
-        placeholder={null}
-        ErrorBoundary={LexicalErrorBoundary}
-      />
-      {children}
-    </LexicalComposer>
+    <div
+      className={`relative ${styles.container} ${containerClass}`}
+      style={placeholderStyle}
+    >
+      <LexicalComposer initialConfig={initialConfig}>
+        <RichTextPlugin
+          contentEditable={
+            <ContentEditable
+              className={`w-full ${styles.contentEditable} ${placeholderLineClasses}`}
+              style={contentStyle}
+            />
+          }
+          placeholder={null}
+          ErrorBoundary={LexicalErrorBoundary}
+        />
+        {children}
+      </LexicalComposer>
+      {placeholder && (
+        <div
+          className={`${placeholderClass} ${styles.placeholderText} ${showClass}`}
+        >
+          {placeholder}
+        </div>
+      )}
+    </div>
   )
 }
 

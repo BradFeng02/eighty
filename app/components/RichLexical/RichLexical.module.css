@@ -1,0 +1,61 @@
+.container {
+  --border-edit: 1px;
+}
+
+/* PLACEHOLDER LINE AND TEXT */
+
+.placeholderLine::after,
+.placeholderText {
+  visibility: hidden;
+}
+
+.placeholderLine.show:not(:focus)::after,
+.container:not(:focus-within) > .placeholderText.show {
+  visibility: visible;
+}
+
+.placeholderLine::after {
+  content: '';
+  pointer-events: none;
+  user-select: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: calc(100% - (2 * var(--border-edit)));
+  width: calc(100% - (2 * var(--border-edit)));
+  margin: var(--border-edit);
+  border-bottom: 2px solid rgb(0, 0, 0, 0.3);
+}
+
+.placeholderText {
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.35;
+  position: absolute;
+  top: var(--border-edit);
+  left: var(--border-edit);
+  width: calc(100% - 2 * var(--border-edit));
+}
+
+/* CONTENT EDITABLE */
+
+.contentEditable {
+  outline: none;
+  border-radius: 1px;
+  border: var(--border-edit) solid transparent;
+  transition:
+    box-shadow 200ms linear,
+    border 200ms linear;
+}
+
+.contentEditable:hover {
+  border: var(--border-edit) solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0px 0px 2px rgba(255, 255, 255, 0.5);
+  transition: none;
+}
+
+.contentEditable:focus {
+  border: var(--border-edit) solid rgba(255, 255, 255, 0.75);
+  box-shadow: 0px 0px 3px rgba(255, 255, 255, 1);
+  transition: none;
+}
