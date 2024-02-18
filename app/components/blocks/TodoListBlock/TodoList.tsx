@@ -29,6 +29,11 @@ import TodoListItem from './TodoListItem'
 import styles from './TodoList.module.css'
 import { eightyTask, newEightyTask } from '@/app/datatypes'
 import { PlusIcon } from '@/app/icons'
+import RichLexical, {
+  $editorIsEmpty,
+  CustomInitializeState,
+  InitialConfigReduced,
+} from '../../RichLexical/RichLexical'
 
 const theme: EditorThemeClasses = {
   paragraph: 'h-min',
@@ -39,76 +44,56 @@ const theme: EditorThemeClasses = {
   },
 }
 
+const initConfig: InitialConfigReduced = { theme }
+
 const TodoList = () => {
-  const editorRoot = useRef<HTMLElement>()
   const editorRef = useRef<LexicalEditor>(null)
   const insertFontSize = 16
-  const [insertPlaceholder, setinsertPlaceholder] = useState(true)
+  const [empty, setEmpty] = useState(true)
   const [tasks, setTasks] = useState<eightyTask[]>([])
 
-  const initialEditorState = (editor: LexicalEditor) => {
+  const isLoaded = useRef<boolean>(false)
+  useEffect(() => {
+    isLoaded.current = true
+    return () => {
+      isLoaded.current = false
+    }
+  }, [])
+
+  const initState: CustomInitializeState = (editor, register) => {
     const p = $createParagraphNode()
     $getRoot().append(p)
     $selectAll()
 
-    // submit task, single line
-    editor.registerCommand(
-      INSERT_PARAGRAPH_COMMAND,
-      (payload: void, editor: LexicalEditor) => {
-        let submit = false
-        editor.getEditorState().read(() => {
-          const test = $getRoot().getChildren()
-          submit =
-            test.length == 1 && test[0].getTextContent().trim().length > 0
-        })
-        if (submit) {
-          submitTask(JSON.stringify(editor.getEditorState()))
-          editor.update(() => {
-            const r = $getRoot()
-            r.clear()
-            const p = $createParagraphNode()
-            r.append(p)
-            $setSelection(null)
-            $selectAll()
-          })
-        } else {
-          editor.focus()
-        }
-        return true
-      },
-      COMMAND_PRIORITY_EDITOR
-    )
-    editor.registerCommand(
-      INSERT_LINE_BREAK_COMMAND,
-      () => true,
-      COMMAND_PRIORITY_EDITOR
-    )
-
     // empty
-    editor.registerRootListener((rootElement: null | HTMLElement) => {
-      if (rootElement) editorRoot.current = rootElement
-    })
     editor.registerUpdateListener(({ editorState }) => {
       editorState.read(() => {
-        const nodes = $getSelection()?.getNodes()
-        if (editorRoot.current)
-          setinsertPlaceholder(
-            !!(nodes && nodes.length == 1 && nodes[0].getType() === 'paragraph')
-          )
+        if (isLoaded.current) setEmpty($editorIsEmpty())
       })
     })
   }
 
-  const initialConfig: InitialConfigType = {
-    namespace: 'TodoListInsert',
-    theme,
-    onError: (err) => console.error(`TodoListInsert: Lexical - ${err}`),
-    editorState: initialEditorState,
-    nodes: [HeadingNode],
-  }
-
-  const submitTask = (editorStateString: string) => {
-    setTasks((t) => [...t, newEightyTask(editorStateString)])
+  const onSubmitTask = (editor: LexicalEditor) => {
+    let submit = false
+    editor.getEditorState().read(() => {
+      // submit if not empty
+      submit = !$editorIsEmpty() // NO LONGER TRIMS
+    })
+    if (submit) {
+      const editorStateString = JSON.stringify(editor.getEditorState())
+      setTasks((t) => [...t, newEightyTask(editorStateString)])
+      // clear and reset formatting
+      editor.update(() => {
+        const r = $getRoot()
+        r.clear()
+        const p = $createParagraphNode()
+        r.append(p)
+        $setSelection(null)
+        $selectAll()
+      })
+    } else {
+      editor.focus()
+    }
   }
 
   return (
@@ -121,7 +106,7 @@ const TodoList = () => {
       <div className="flex items-center gap-[5px]">
         <div
           className="w-[18px] min-w-[18px] select-none"
-          style={{ opacity: insertPlaceholder ? 0.5 : 1 }}
+          style={{ opacity: empty ? 0.35 : 1 }}
           onClick={() => {
             editorRef.current?.dispatchCommand(
               INSERT_PARAGRAPH_COMMAND,
@@ -131,24 +116,21 @@ const TodoList = () => {
         >
           <div className="h-[15px] w-[15px] text-black">{PlusIcon}</div>
         </div>
-        <div className="relative flex-grow">
-          <LexicalComposer initialConfig={initialConfig}>
-            <RichTextPlugin
-              contentEditable={
-                <ContentEditable
-                  className={`content-editable todolist-insert hideline w-full${insertPlaceholder ? ' show-placeholder' : ''}`}
-                  style={{
-                    fontSize: insertFontSize + 'px',
-                  }}
-                />
-              }
-              placeholder={null}
-              ErrorBoundary={LexicalErrorBoundary}
-            />
-            <HistoryPlugin />
-            <EditorRefPlugin editorRef={editorRef} />
-          </LexicalComposer>
-        </div>
+        <RichLexical
+          containerClass="flex-grow"
+          namespace="TodoListInsert"
+          initConfig={initConfig}
+          customInitState={initState}
+          placeholder="New task"
+          hideEmptyLine
+          fontSize={insertFontSize + 'px'}
+          singleLine
+          singleParagraph
+          onSubmit={onSubmitTask}
+        >
+          <HistoryPlugin />
+          <EditorRefPlugin editorRef={editorRef} />
+        </RichLexical>
       </div>
     </div>
   )
