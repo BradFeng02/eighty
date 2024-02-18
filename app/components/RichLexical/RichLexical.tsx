@@ -45,6 +45,10 @@ export type CustomInitializeState = (
   register: RegisterCommand
 ) => void
 
+export const $editorIsEmpty = () => {
+  return !$getRoot().getTextContentSize()
+}
+
 type Props = {
   namespace: string
   placeholder?: string
@@ -130,7 +134,7 @@ const RichLexical = ({
     if (!hideEmptyLine || placeholder) {
       editor.registerUpdateListener(({ editorState }) => {
         editorState.read(() => {
-          const empty = !$getRoot().getTextContentSize()
+          const empty = $editorIsEmpty()
           if (editorLoaded.current) setShowPlaceholder(empty)
           else initialShow.current = empty
         })
