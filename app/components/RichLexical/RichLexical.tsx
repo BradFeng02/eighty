@@ -115,8 +115,8 @@ const RichLexical = ({
       editor.registerCommand(
         INSERT_PARAGRAPH_COMMAND,
         (payload: void, editor: LexicalEditor) => {
-          editor.blur()
-          onSubmit?.(editor)
+          if (onSubmit) onSubmit(editor)
+          else editor.blur()
           return true
         },
         COMMAND_PRIORITY_EDITOR
