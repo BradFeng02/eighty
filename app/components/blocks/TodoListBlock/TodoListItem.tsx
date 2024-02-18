@@ -13,11 +13,23 @@ import { useRef, useState } from 'react'
 import RichLexical, {
   InitialConfigReduced,
   CustomInitializeState,
+  $editorIsEmpty,
 } from '../../RichLexical/RichLexical'
 
 type Props = {
   task: eightyTask
 }
+
+const theme: EditorThemeClasses = {
+  paragraph: 'h-min',
+  text: {
+    bold: 'font-bold',
+    italic: 'italic',
+    underline: 'underline',
+  },
+}
+
+const initConfig: InitialConfigReduced = { theme }
 
 const TodoListItem = ({ task }: Props) => {
   const fontSize = 16
@@ -32,9 +44,8 @@ const TodoListItem = ({ task }: Props) => {
     register(BLUR_COMMAND, (editor) => {
       const newstate = editor.getEditorState()
       newstate.read(() => {
-        const nodes = $getSelection()?.getNodes()
-        // if empty
-        if (nodes && nodes.length == 1 && nodes[0].getType() === 'paragraph') {
+        // if empty don't update
+        if ($editorIsEmpty()) {
           if (contentRef.current) editor.setEditorState(contentRef.current)
           editor.blur()
         } else {
@@ -47,20 +58,6 @@ const TodoListItem = ({ task }: Props) => {
       })
       return false
     })
-  }
-
-  const theme: EditorThemeClasses = {
-    paragraph: 'h-min',
-    text: {
-      bold: 'font-bold',
-      italic: 'italic',
-      underline: 'underline',
-    },
-  }
-
-  const initConfig: InitialConfigReduced = {
-    theme,
-    nodes: [HeadingNode],
   }
 
   return (
@@ -82,8 +79,8 @@ const TodoListItem = ({ task }: Props) => {
           namespace="TodoListItem"
           initConfig={initConfig}
           customInitState={initState}
+          fontSize={fontSize + 'px'}
           contentStyle={{
-            fontSize: fontSize + 'px',
             textDecoration: checked ? 'line-through' : undefined,
             opacity: checked ? 0.6 : undefined,
           }}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   InitialConfigType,
   LexicalComposer,
@@ -22,6 +22,10 @@ import {
   ParagraphNode,
 } from 'lexical'
 import BlockWrapper from '../BlockWrapper'
+import RichLexical, {
+  CustomInitializeState,
+  InitialConfigReduced,
+} from '../../RichLexical/RichLexical'
 
 type Props = {
   wid: number
@@ -41,38 +45,49 @@ const theme: EditorThemeClasses = {
   },
 }
 
+const initConfig: InitialConfigReduced = {
+  theme,
+  nodes: [HeadingNode],
+}
+
 const LabelBlock = (props: Props) => {
   const block = useRef<HTMLDivElement>(null)
-  const editorRoot = useRef<HTMLElement>()
-  const [placeholder, setPlaceholder] = useState(true)
+  const wrapper = useRef<HTMLDivElement>(null)
   const [fontSize, setFontSize] = useState(24)
-  const [squish, setSquish] = useState(1)
 
-  const initialEditorState = (editor: LexicalEditor) => {
-    // centered heading
+  const squishLabel = () => {
+    if (block.current && wrapper.current) {
+      const scaleY = Math.min(
+        1,
+        block.current.clientHeight / wrapper.current.clientHeight
+      )
+      wrapper.current.style.scale = '1 ' + scaleY
+    }
+  }
+
+  // squish too tall
+  useEffect(() => {
+    const resizeObserver = new ResizeObserver(() => {
+      squishLabel()
+    })
+    if (wrapper.current) resizeObserver.observe(wrapper.current)
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [])
+
+  // layout effect: avoid flicker
+  useLayoutEffect(() => squishLabel(), [fontSize])
+
+  const initState: CustomInitializeState = (editor, register) => {
     const heading = $createHeadingNode('h1')
     heading.setFormat('center')
     $getRoot().append(heading)
     $selectAll()
 
-    // single paragraph
-    editor.registerCommand(
-      INSERT_PARAGRAPH_COMMAND,
-      (payload: void, editor: LexicalEditor) => {
-        editor.blur()
-        return true
-      },
-      COMMAND_PRIORITY_EDITOR
-    )
-
     // no bold
-    editor.registerCommand(
-      FORMAT_TEXT_COMMAND,
-      (payload: string, editor: LexicalEditor) => {
-        return payload === 'bold'
-      },
-      COMMAND_PRIORITY_EDITOR
-    )
+    register(FORMAT_TEXT_COMMAND, (_, payload) => payload === 'bold')
 
     // no delete heading
     editor.registerNodeTransform(ParagraphNode, (node) => {
@@ -80,39 +95,6 @@ const LabelBlock = (props: Props) => {
       heading.setFormat('center')
       node.replace(heading)
     })
-
-    // squish too tall, empty
-    editor.registerRootListener((rootElement: null | HTMLElement) => {
-      if (rootElement) editorRoot.current = rootElement
-    })
-    editor.registerUpdateListener(({ editorState }) => {
-      // empty
-      editorState.read(() => {
-        const nodes = $getSelection()?.getNodes()
-        if (block.current)
-          setPlaceholder(
-            !!(nodes && nodes.length == 1 && nodes[0].getType() === 'heading')
-          )
-      })
-
-      // set squish
-      if (editorRoot.current && block.current) {
-        setSquish(
-          Math.min(
-            1,
-            block.current.clientHeight / editorRoot.current.clientHeight
-          )
-        )
-      }
-    })
-  }
-
-  const initialConfig: InitialConfigType = {
-    namespace: 'LabelBlock',
-    theme,
-    onError: (err) => console.error(`LabelBlock: Lexical - ${err}`),
-    editorState: initialEditorState,
-    nodes: [HeadingNode],
   }
 
   return (
@@ -120,30 +102,19 @@ const LabelBlock = (props: Props) => {
       <div
         ref={block}
         className="flex h-full w-full items-center overflow-visible"
-        // className="flex h-full items-center"
       >
-        <div
-          className="relative w-full"
-          style={{
-            scale: `1 ${squish}`,
-          }}
-        >
-          <LexicalComposer initialConfig={initialConfig}>
-            <RichTextPlugin
-              contentEditable={
-                <ContentEditable
-                  className={`content-editable label-block w-full${placeholder ? ' show-placeholder' : ''}`}
-                  style={{
-                    fontSize: fontSize + 'px',
-                    // scale: `1 ${squish}`,
-                  }}
-                />
-              }
-              placeholder={null}
-              ErrorBoundary={LexicalErrorBoundary}
-            />
+        <div ref={wrapper} className="w-full">
+          <RichLexical
+            namespace="LabelBlock"
+            initConfig={initConfig}
+            customInitState={initState}
+            fontSize={fontSize + 'px'}
+            placeholder="Label"
+            placeholderClass="text-center font-bold"
+            singleParagraph
+          >
             <HistoryPlugin />
-          </LexicalComposer>
+          </RichLexical>
         </div>
       </div>
     </BlockWrapper>
