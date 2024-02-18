@@ -18,6 +18,7 @@ import {
   $getRoot,
   LexicalCommand,
   CommandListenerPriority,
+  BLUR_COMMAND,
 } from 'lexical'
 import { CSSProperties, ReactNode, useEffect, useRef, useState } from 'react'
 import styles from './RichLexical.module.css'
@@ -132,13 +133,25 @@ const RichLexical = ({
 
     // empty placeholder line or text
     if (!hideEmptyLine || placeholder) {
-      editor.registerUpdateListener(({ editorState }) => {
-        editorState.read(() => {
+      // show if empty
+      const editorSetShow = (editor: LexicalEditor) => {
+        editor.getEditorState().read(() => {
           const empty = $editorIsEmpty()
           if (editorLoaded.current) setShowPlaceholder(empty)
           else initialShow.current = empty
         })
-      })
+      }
+      // initial check
+      editorSetShow(editor)
+      // check on blur
+      editor.registerCommand(
+        BLUR_COMMAND,
+        (_, editor) => {
+          editorSetShow(editor)
+          return false
+        },
+        COMMAND_PRIORITY_EDITOR
+      )
     }
     /////
   }
