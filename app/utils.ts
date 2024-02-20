@@ -1,23 +1,31 @@
 import { Atkinson_Hyperlegible } from 'next/font/google'
 
-export type Point2 = {
+export class Point2 {
   x: number
   y: number
-}
 
-export type RefVal<T> = {
-  val: T
-}
+  constructor(x: number, y: number) {
+    this.x = x
+    this.y = y
+  }
 
-export const refVal = <T>(val: T) => ({ val })
+  move = (dx: number, dy: number) => {
+    this.x += dx
+    this.y += dy
+  }
 
-export const point2 = (x: number, y: number) => ({ x, y })
+  set = (x: number, y: number) => {
+    this.x = x
+    this.y = y
+  }
 
-export const movePt2 = (from: Point2, dx: number, dy: number) =>
-  point2(from.x + dx, from.y + dy)
+  equals = (point2: Point2) => {
+    return this.x === point2.x && this.y === point2.y
+  }
 
-export const pt2Equals = (a: Point2, b: Point2) => {
-  return a.x === b.x && a.y === b.y
+  clone = () => {
+    return new Point2(this.x, this.y)
+  }
 }
 
 // usage: <className={AKHyper.className}
