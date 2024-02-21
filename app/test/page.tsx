@@ -4,8 +4,12 @@ import styles from './test.module.css'
 const testpage = () => {
   return (
     <>
-      <main
-        className={`${styles['test-container']} overflow-auto border-8 border-solid border-black`}
+      <main style={{
+      position: 'absolute',
+      top: '200px',
+      left: '200px'
+    }}
+        className={`${styles['test-container']} resize overflow-auto border-8 border-solid border-black`}
       >
         <Space></Space>
       </main>

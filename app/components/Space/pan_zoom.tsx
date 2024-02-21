@@ -42,35 +42,61 @@ export default class PanZoomController {
     this.setTransition(Transition.Fast)
 
     const nodeRect = this.node.getBoundingClientRect() // won't change size
-    this.nodeHalf = new Point2(nodeRect.width / 2.0, nodeRect.height / 2.0)
+    this.nodeHalf = new Point2(nodeRect.width / 2, nodeRect.height / 2)
+    this.nodeMid = new Point2(0, 0) // will be moved in resize, must start centered
     this.resize()
-    this.nodeMid = this.spaceMid.clone() // starts already centered
 
     this.registerListeners()
+    this.resizeObserver.observe(this.space)
   }
 
   readonly destroy = () => {
+    this.resizeObserver.disconnect()
     this.removeListeners()
     this.node.style.cssText = this.restoreStyle
   }
 
-  readonly resize = () => {
+  private resizeObserver = new ResizeObserver(() => this.resize())
+  private resize = () => {
     const spaceRect = this.space.getBoundingClientRect()
 
     this.spacePos.set(spaceRect.x, spaceRect.y)
+    const oldmidx = this.spaceMid.x
+    const oldmidy = this.spaceMid.y
     this.spaceMid.set(
       (spaceRect.left + spaceRect.right) / 2,
       (spaceRect.top + spaceRect.bottom) / 2
     )
+    this.nodeMid.move(this.spaceMid.x - oldmidx, this.spaceMid.y - oldmidy)
     this.spaceHalf.set(spaceRect.width / 2, spaceRect.height / 2)
 
-    this.scale = Math.min(
+    const newscale = Math.min(
       (spaceRect.width - PADDING * 2) / (this.nodeHalf.x * 2),
       (spaceRect.height - PADDING * 2) / (this.nodeHalf.y * 2)
     )
+    if (newscale <= 0) return // wonky when too small
+    const oldscale = this.scale
+    this.scale = newscale
     this.node.style.transform = `scale(${this.scale})`
-    this.max_zoom = Math.max(3.0 / this.scale, 2)
-    this.target_zoom = Math.max(2.0 / this.scale, 1.3)
+    this.max_zoom = Math.max(3 / this.scale, 2)
+    this.target_zoom = Math.max(2 / this.scale, 1.3)
+
+    // if shifted or zoomed in/out, keep focus centered and size same
+    if (!this.viewIsReset()) {
+      this.setTransition(Transition.None)
+      this.zoomBy(oldscale / this.scale)
+    }
+  }
+
+  private update = () => {
+    const spaceRect = this.space.getBoundingClientRect()
+    const dx = spaceRect.x - this.spacePos.x
+    const dy = spaceRect.y - this.spacePos.y
+    if (dx || dy) {
+      this.nodeMid.move(dx, dy)
+      this.spaceMid.move(dx, dy)
+      this.spacePos.set(spaceRect.x, spaceRect.y)
+    }
   }
 
   /*****
@@ -98,7 +124,7 @@ export default class PanZoomController {
   private lastMagY: number = -1
 
   private wheelHandler = (e: WheelEvent) => {
-    this.setTransition(Transition.Fast)
+    this.update()
     const dx_px = normalizeWheelDelta(e.deltaX, e.deltaMode)
     const dy_px = normalizeWheelDelta(e.deltaY, e.deltaMode)
     const magX = Math.abs(dx_px)
@@ -127,6 +153,7 @@ export default class PanZoomController {
     }
     this.lastWheelTime = e.timeStamp
 
+    this.setTransition(Transition.Fast)
     // scroll
     if (!e.ctrlKey) {
       this.pan(-dx, -dy)
@@ -137,7 +164,7 @@ export default class PanZoomController {
       if (wheelY === WheelType.Unknown) zoomAmt = clamp(zoomAmt, 0, ZOOM_STEP)
       else if (wheelY === WheelType.Wheel) zoomAmt = ZOOM_STEP
       const factor = 1 + Math.abs(zoomAmt / 100)
-      this.zoomBy(dy < 0 ? factor : 1 / factor)
+      this.zoomTo(dy < 0 ? factor : 1 / factor, e.clientX, e.clientY)
     }
     e.stopPropagation()
     e.preventDefault()
@@ -146,6 +173,7 @@ export default class PanZoomController {
   /*** POINTER ***/
 
   private pointerDownHandler = (e: PointerEvent) => {
+    this.update()
     switch (e.pointerType) {
       case 'mouse':
         break
@@ -164,6 +192,7 @@ export default class PanZoomController {
 
   private pan = (dx: number, dy: number) => {
     this.trans.move(dx, dy)
+    this.nodeMid.move(dx, dy)
     this.node.style.translate = `${this.trans.x}px ${this.trans.y}px`
   }
 
@@ -173,7 +202,13 @@ export default class PanZoomController {
   }
 
   private zoomTo = (factor: number, originX: number, originY: number) => {
-    1 === 1
+    const startZoom = this.zoom
+    this.zoomBy(factor)
+    const zoomed = this.zoom / startZoom // may be clamped
+
+    const dx = (zoomed - 1) * (this.nodeMid.x - originX)
+    const dy = (zoomed - 1) * (this.nodeMid.y - originY)
+    this.pan(dx, dy)
   }
 
   private transition: Transition | undefined
@@ -183,4 +218,7 @@ export default class PanZoomController {
       this.transition = speed
     }
   }
+
+  private viewIsReset = () =>
+    this.zoom == 1 && this.nodeMid.equals(this.spaceMid)
 }

@@ -16,13 +16,9 @@ const SpaceWrapper = ({ wid, hgt, children }: Props) => {
   // mount & unmount
   useEffect(() => {
     setOpacity(1)
-
     let controller = new PanZoomController(container, wrapper)
-    const resizeObserver = new ResizeObserver(() => controller.resize())
-    if (container.current) resizeObserver.observe(container.current)
 
     return () => {
-      resizeObserver.disconnect()
       controller.destroy()
     }
   }, [])
