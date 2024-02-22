@@ -1,3 +1,4 @@
+import { log } from 'console'
 import { Atkinson_Hyperlegible } from 'next/font/google'
 
 export class Point2 {
@@ -19,8 +20,8 @@ export class Point2 {
     this.y = y
   }
 
-  equals = (point2: Point2) => {
-    return this.x === point2.x && this.y === point2.y
+  equals = (point2: Point2, ek?: number) => {
+    return fequals(this.x, point2.x, ek) && fequals(this.y, point2.y, ek)
   }
 
   clone = () => {
@@ -39,3 +40,7 @@ export const AKHyper = Atkinson_Hyperlegible({
 
 export const clamp = (n: number, min: number, max: number) =>
   Math.min(Math.max(n, min), max)
+
+// ek approx. max magnitude of a and b
+export const fequals = (a: number, b: number, ek: number = 1) =>
+  Math.abs(a - b) < Number.EPSILON * ek

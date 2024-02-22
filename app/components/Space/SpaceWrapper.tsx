@@ -11,12 +11,13 @@ type Props = {
 const SpaceWrapper = ({ wid, hgt, children }: Props) => {
   const container = useRef<HTMLDivElement>(null)
   const wrapper = useRef<HTMLDivElement>(null)
+  const [viewIsReset, setViewIsReset] = useState(true)
   const [opacity, setOpacity] = useState(0)
 
   // mount & unmount
   useEffect(() => {
     setOpacity(1)
-    let controller = new PanZoomController(container, wrapper)
+    let controller = new PanZoomController(container, wrapper, setViewIsReset)
 
     return () => {
       controller.destroy()
@@ -27,7 +28,7 @@ const SpaceWrapper = ({ wid, hgt, children }: Props) => {
     <div className="h-full w-full touch-none overflow-clip" ref={container}>
       <div
         ref={wrapper}
-        className={`relative border-2 border-gray-600 bg-white`}
+        className={`relative border-4 ${viewIsReset ? 'border-blue-700' : 'border-gray-600'} bg-white`}
         style={{
           width: wid * GRID_SIZE_PX,
           height: hgt * GRID_SIZE_PX,

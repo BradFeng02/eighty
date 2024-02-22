@@ -1,4 +1,4 @@
-import { clamp } from '@/app/utils'
+import { Point2, clamp } from '@/app/utils'
 
 export const PADDING = 10
 export const TAP_DEADZONE = 10
@@ -20,13 +20,7 @@ export enum WheelType {
 export const normalizeWheelDelta = (delta: number, mode: number) => {
   // some browsers wheel not pixel
   let d = delta
-  if (mode) {
-    if (mode == 1) {
-      d *= 40
-    } else {
-      d *= 800
-    }
-  }
+  if (mode) d *= mode === 1 ? 40 : 800
   return d
 }
 
@@ -82,4 +76,24 @@ export const setTransition = (node: HTMLElement, speed: Transition) => {
       node.style.transitionTimingFunction = SLOW_TIMING
       break
   }
+}
+
+///// drag
+
+export type TranslateFunction = (dx: number, dy: number) => void
+
+export class dragAction {
+  private start: Point2
+  private transFun: TranslateFunction
+
+  // drag start
+  constructor(startX: number, startY: number, translateFun: TranslateFunction) {
+    console.log('drag')
+    this.start = new Point2(startX, startY)
+    this.transFun = translateFun
+  }
+
+  readonly dragMove = () => {}
+
+  readonly dragEnd = () => {}
 }

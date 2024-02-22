@@ -6,8 +6,8 @@ const testpage = () => {
     <>
       <main style={{
       position: 'absolute',
-      top: '200px',
-      left: '200px'
+      top: '100px',
+      left: '100px'
     }}
         className={`${styles['test-container']} resize overflow-auto border-8 border-solid border-black`}
       >
