@@ -27,7 +27,7 @@ export default class PanZoomController {
   private spacePos = new Point2(0, 0) // set in resize
   private spaceMid = new Point2(0, 0) // set in resize
   private nodeMid: Point2
-  private spaceHalf = new Point2(0, 0) // set in resize
+  private spaceQuarter = new Point2(0, 0) // set in resize
   private nodeHalf: Point2
 
   constructor(
@@ -68,7 +68,7 @@ export default class PanZoomController {
       (spaceRect.top + spaceRect.bottom) / 2
     )
     this.nodeMid.move(this.spaceMid.x - oldmidx, this.spaceMid.y - oldmidy)
-    this.spaceHalf.set(spaceRect.width / 2, spaceRect.height / 2)
+    this.spaceQuarter.set(spaceRect.width / 4, spaceRect.height / 4)
 
     const newscale = Math.min(
       (spaceRect.width - PADDING * 2) / (this.nodeHalf.x * 2),
@@ -85,6 +85,7 @@ export default class PanZoomController {
     if (!this.viewIsReset()) {
       this.setTransition(Transition.None)
       this.zoomBy(oldscale / this.scale)
+      this.pan(0, 0) // need to stay in bounds
     }
   }
 
@@ -191,8 +192,20 @@ export default class PanZoomController {
    *****/
 
   private pan = (dx: number, dy: number) => {
-    this.trans.move(dx, dy)
-    this.nodeMid.move(dx, dy)
+    const nodeHalfScaledX = this.nodeHalf.x * this.scale * this.zoom
+    const nodeHalfScaledY = this.nodeHalf.y * this.scale * this.zoom
+    const bx = Math.max(
+      nodeHalfScaledX - this.spaceQuarter.x,
+      this.spaceQuarter.x * 2 - nodeHalfScaledX - PADDING
+    )
+    const by = Math.max(
+      nodeHalfScaledY - this.spaceQuarter.y,
+      this.spaceQuarter.y * 2 - nodeHalfScaledY - PADDING
+    )
+    const clampdx = clamp(this.trans.x + dx, -bx, bx) - this.trans.x
+    const clampdy = clamp(this.trans.y + dy, -by, by) - this.trans.y
+    this.trans.move(clampdx, clampdy)
+    this.nodeMid.move(clampdx, clampdy)
     this.node.style.translate = `${this.trans.x}px ${this.trans.y}px`
   }
 
