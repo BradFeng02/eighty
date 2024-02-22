@@ -49,6 +49,11 @@ const initConfig: InitialConfigReduced = {
   theme,
   nodes: [HeadingNode],
 }
+const $defaultNode = () => {
+  const heading = $createHeadingNode('h1')
+  heading.setFormat('center')
+  return heading
+}
 
 const LabelBlock = (props: Props) => {
   const block = useRef<HTMLDivElement>(null)
@@ -81,20 +86,8 @@ const LabelBlock = (props: Props) => {
   useLayoutEffect(() => squishLabel(), [fontSize])
 
   const initState: CustomInitializeState = (editor, register) => {
-    const heading = $createHeadingNode('h1')
-    heading.setFormat('center')
-    $getRoot().append(heading)
-    $selectAll()
-
     // no bold
     register(FORMAT_TEXT_COMMAND, (_, payload) => payload === 'bold')
-
-    // no delete heading
-    editor.registerNodeTransform(ParagraphNode, (node) => {
-      const heading = $createHeadingNode('h1')
-      heading.setFormat('center')
-      node.replace(heading)
-    })
   }
 
   return (
@@ -107,9 +100,11 @@ const LabelBlock = (props: Props) => {
           <RichLexical
             namespace="LabelBlock"
             initConfig={initConfig}
+            $defaultNodeType={$defaultNode}
             customInitState={initState}
             fontSize={fontSize + 'px'}
             placeholder="Label"
+            contentClass="text-center"
             placeholderClass="text-center font-bold"
             singleParagraph
           >

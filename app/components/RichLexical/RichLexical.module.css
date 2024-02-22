@@ -7,6 +7,8 @@
 .placeholderLine::after,
 .placeholderText {
   visibility: hidden;
+  pointer-events: none;
+  user-select: none;
 }
 
 .placeholderLine.show:not(:focus)::after,
@@ -16,8 +18,6 @@
 
 .placeholderLine::after {
   content: '';
-  pointer-events: none;
-  user-select: none;
   position: absolute;
   top: 0;
   left: 0;
@@ -28,8 +28,6 @@
 }
 
 .placeholderText {
-  pointer-events: none;
-  user-select: none;
   opacity: 0.35;
   position: absolute;
   top: var(--border-edit);

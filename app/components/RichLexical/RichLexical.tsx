@@ -19,6 +19,9 @@ import {
   LexicalCommand,
   CommandListenerPriority,
   BLUR_COMMAND,
+  ElementNode,
+  $setSelection,
+  ParagraphNode,
 } from 'lexical'
 import { CSSProperties, ReactNode, useEffect, useRef, useState } from 'react'
 import styles from './RichLexical.module.css'
@@ -55,6 +58,7 @@ type Props = {
   placeholder?: string
   hideEmptyLine?: boolean
   initConfig: InitialConfigReduced
+  $defaultNodeType?: () => ElementNode
   customInitState?: CustomInitializeState
   fontSize?: string
   contentStyle?: CSSProperties
@@ -63,6 +67,7 @@ type Props = {
   onSubmit?: (editor: LexicalEditor) => void
   placeholderClass?: string
   containerClass?: string
+  contentClass?: string
   children: ReactNode
 }
 
@@ -71,6 +76,7 @@ const RichLexical = ({
   placeholder,
   hideEmptyLine = false,
   initConfig,
+  $defaultNodeType,
   customInitState,
   fontSize = 'inherit',
   contentStyle,
@@ -79,6 +85,7 @@ const RichLexical = ({
   onSubmit,
   placeholderClass = '',
   containerClass = '',
+  contentClass = '',
   children,
 }: Props) => {
   const [showPlaceholder, setShowPlaceholder] = useState(false)
@@ -153,6 +160,28 @@ const RichLexical = ({
         COMMAND_PRIORITY_EDITOR
       )
     }
+
+    // default node type
+    if ($defaultNodeType) {
+      // replace default paragraph node
+      editor.registerNodeTransform(ParagraphNode, (node) => {
+        node.replace($defaultNodeType(), true)
+      })
+      // clear on blur if empty
+      editor.registerCommand(
+        BLUR_COMMAND,
+        (_, editor) => {
+          editor.update(() => {
+            if ($editorIsEmpty() && $getRoot().getChildren().length === 1) {
+              $getRoot().clear()
+              $setSelection(null)
+            }
+          })
+          return false
+        },
+        COMMAND_PRIORITY_EDITOR
+      )
+    }
     /////
   }
 
@@ -182,7 +211,7 @@ const RichLexical = ({
         <RichTextPlugin
           contentEditable={
             <ContentEditable
-              className={`w-full ${styles.contentEditable} ${placeholderLineClasses}`}
+              className={`w-full ${styles.contentEditable} ${contentClass} ${placeholderLineClasses}`}
               style={{ fontSize, ...contentStyle }}
             />
           }

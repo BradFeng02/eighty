@@ -1,32 +1,17 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import {
-  InitialConfigType,
-  LexicalComposer,
-} from '@lexical/react/LexicalComposer'
-import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin'
-import { ContentEditable } from '@lexical/react/LexicalContentEditable'
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin'
 import { EditorRefPlugin } from '@lexical/react/LexicalEditorRefPlugin'
-import LexicalErrorBoundary from '@lexical/react/LexicalErrorBoundary'
-import { $createHeadingNode, HeadingNode } from '@lexical/rich-text'
 import {
   $getRoot,
-  $getSelection,
   $selectAll,
-  COMMAND_PRIORITY_EDITOR,
   EditorThemeClasses,
-  FORMAT_TEXT_COMMAND,
   INSERT_PARAGRAPH_COMMAND,
-  INSERT_LINE_BREAK_COMMAND,
   LexicalEditor,
-  ParagraphNode,
-  $createParagraphNode,
   $setSelection,
 } from 'lexical'
 import TodoListItem from './TodoListItem'
-import styles from './TodoList.module.css'
 import { eightyTask, newEightyTask } from '@/app/datatypes'
 import { PlusIcon } from '@/app/icons'
 import RichLexical, {
@@ -61,10 +46,6 @@ const TodoList = () => {
   }, [])
 
   const initState: CustomInitializeState = (editor, register) => {
-    const p = $createParagraphNode()
-    $getRoot().append(p)
-    $selectAll()
-
     // empty
     editor.registerUpdateListener(({ editorState }) => {
       editorState.read(() => {
@@ -86,8 +67,6 @@ const TodoList = () => {
       editor.update(() => {
         const r = $getRoot()
         r.clear()
-        const p = $createParagraphNode()
-        r.append(p)
         $setSelection(null)
         $selectAll()
       })
