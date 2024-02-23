@@ -5,46 +5,6 @@ export const TAP_DEADZONE = 10
 export const DOUBLE_TAP_DEADZONE = 30
 export const DOUBLE_TAP_MS = 500
 
-///// wheel
-
-export const SCROLL_STEP = 50
-export const ZOOM_STEP = 15
-export const SCROLL_WINDOW_MS = 100
-
-export enum WheelType {
-  Unknown,
-  Wheel,
-  Smooth,
-}
-
-export const normalizeWheelDelta = (delta: number, mode: number) => {
-  // some browsers wheel not pixel
-  let d = delta
-  if (mode) d *= mode === 1 ? 40 : 800
-  return d
-}
-
-// returns [adjusted delta, using wheel]
-export const adjustWheel = (
-  delta: number,
-  mag: number,
-  lastMag: number,
-  elapsed: number
-): [number, WheelType] => {
-  if (!delta) return [delta, WheelType.Unknown] // skip 0
-  // if big enough and same magnitude, likely wheel -> fixed step
-  if (
-    mag > SCROLL_STEP &&
-    lastMag > SCROLL_STEP &&
-    (mag % lastMag === 0 || lastMag % mag === 0) // lag sometimes multiple
-  )
-    return [SCROLL_STEP * Math.sign(delta), WheelType.Wheel]
-  // starting new scroll -> clamp in case is wheel (big delta)
-  if (elapsed > SCROLL_WINDOW_MS)
-    return [clamp(delta, -SCROLL_STEP, SCROLL_STEP), WheelType.Unknown]
-  return [delta, WheelType.Smooth]
-}
-
 ///// transition
 
 const SMOOTH_TRANSITION_PROP = 'opacity, scale, translate'
@@ -78,22 +38,39 @@ export const setTransition = (node: HTMLElement, speed: Transition) => {
   }
 }
 
-///// drag
+///// drag pan
 
-export type TranslateFunction = (dx: number, dy: number) => void
-
-export class dragAction {
-  private start: Point2
+export type TranslateFunction = (tx: number, ty: number) => void
+export class dragPanAction {
+  private start: Point2 // pointer down event client coords
+  private from: Point2 // starting translate
   private transFun: TranslateFunction
 
-  // drag start
-  constructor(startX: number, startY: number, translateFun: TranslateFunction) {
+  /**
+   * drag start
+   * @param start pointer down event client coords
+   * @param from starting translate
+   * @param translateFun function to pan to given trans (panToInSpace)
+   */
+  constructor(
+    startX: number,
+    startY: number,
+    fromX: number,
+    fromY: number,
+    translateFun: TranslateFunction
+  ) {
     console.log('drag')
     this.start = new Point2(startX, startY)
+    this.from = new Point2(fromX, fromY)
     this.transFun = translateFun
   }
 
-  readonly dragMove = () => {}
+  readonly dragMove = (ex: number, ey: number) => {
+    this.transFun(
+      this.from.x + ex - this.start.x,
+      this.from.y + ey - this.start.y
+    )
+  }
 
   readonly dragEnd = () => {}
 }

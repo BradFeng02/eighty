@@ -11,11 +11,14 @@ import {
   setTransition,
   adjustWheel,
 } from './pan_zoom_utils'
+import WheelLogic from './wheel_logic'
 
 export default class PanZoomController {
   private readonly space: HTMLDivElement
   private readonly node: HTMLDivElement
   private restoreStyle: string
+
+  private wheelLogic: WheelLogic
 
   private onViewIsResetChange: (val: boolean) => void
 
@@ -52,6 +55,7 @@ export default class PanZoomController {
     this.nodeMid = new Point2(0, 0) // will be moved in resize, must start centered
     this.resize()
 
+    this.wheelLogic = new WheelLogic(this.pan, this.zoomTo)
     this.registerListeners()
     this.resizeObserver.observe(this.space)
   }
@@ -129,50 +133,11 @@ export default class PanZoomController {
 
   /*** WHEEL zoom & scroll ***/
 
-  private lastWheelTime: number = -1000
-  private lastMag = new Point2(-1, -1)
-
   private wheelHandler = (e: WheelEvent) => {
     this.update()
-    const dx_px = normalizeWheelDelta(e.deltaX, e.deltaMode)
-    const dy_px = normalizeWheelDelta(e.deltaY, e.deltaMode)
-    const magX = Math.abs(dx_px)
-    const magY = Math.abs(dy_px)
-    const elapsed = e.timeStamp - this.lastWheelTime
-    this.lastWheelTime = e.timeStamp
-
-    const [dx, wheelX] = adjustWheel(
-      this.lastMag.x === -1 ? 0 : dx_px, // first ever scroll, ignore
-      magX,
-      this.lastMag.x,
-      elapsed
-    )
-    const [dy, wheelY] = adjustWheel(
-      this.lastMag.y === -1 ? 0 : dy_px, // first ever scroll, ignore
-      magY,
-      this.lastMag.y,
-      elapsed
-    )
-    // if is wheel or unknown
-    if (wheelX !== WheelType.Smooth || wheelY !== WheelType.Smooth)
-      this.lastMag.set(magX, magY)
-    // if ever not wheel, disable possibility for rest of scroll
-    else this.lastMag.set(0.11111111111, 0.11111111111)
-
-    this.setTransition(Transition.Fast)
-    // scroll
-    if (!e.ctrlKey) {
+    if (this.wheelLogic.wheel(e)) {
       this.setViewIsReset(false)
-      this.pan(-dx, -dy)
-    }
-    // zoom
-    else if (e.ctrlKey && dy) {
-      this.setViewIsReset(false)
-      let zoomAmt = Math.abs(dy)
-      if (wheelY === WheelType.Unknown) zoomAmt = clamp(zoomAmt, 0, ZOOM_STEP)
-      else if (wheelY === WheelType.Wheel) zoomAmt = ZOOM_STEP
-      const factor = 1 + Math.abs(zoomAmt / 100)
-      this.zoomTo(dy < 0 ? factor : 1 / factor, e.clientX, e.clientY)
+      this.setTransition(Transition.Fast)
     }
     e.stopPropagation()
     e.preventDefault()
@@ -219,7 +184,8 @@ export default class PanZoomController {
     this.node.style.translate = `${this.trans.x}px ${this.trans.y}px`
   }
 
-  private panToInSpace = (tx: number, ty: number) => {
+  // function to pan to given trans
+  private translateTo = (tx: number, ty: number) => {
     this.pan(tx - this.trans.x, ty - this.trans.y)
   }
 
@@ -241,7 +207,7 @@ export default class PanZoomController {
   private resetView = () => {
     this.setViewIsReset(true)
     this.zoomBy(1 / this.zoom)
-    this.panToInSpace(0, 0)
+    this.translateTo(0, 0)
   }
 
   private _viewIsReset = true
