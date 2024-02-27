@@ -76,7 +76,7 @@ const TodoList = () => {
   }
 
   return (
-    <div className="scrollable flex-grow overflow-scroll border-t-2 border-white pt-[5px]">
+    <div className="flex-grow touch-pan-y overflow-auto border-t-2 border-white pt-[5px]">
       <ol>
         {tasks.map((t, i) => (
           <TodoListItem task={t} key={i} />

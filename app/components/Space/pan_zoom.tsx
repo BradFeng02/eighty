@@ -1,17 +1,8 @@
-import { Point2, clamp, fequals } from '@/app/utils'
+import { Point2, clamp } from '@/app/utils'
 import { RefObject } from 'react'
-import {
-  PADDING,
-  SCROLL_WINDOW_MS,
-  SCROLL_STEP,
-  ZOOM_STEP,
-  WheelType,
-  normalizeWheelDelta,
-  Transition,
-  setTransition,
-  adjustWheel,
-} from './pan_zoom_utils'
+import { PADDING, Transition, setTransition } from './pan_zoom_utils'
 import WheelLogic from './wheel_logic'
+import PointerLogic from './pointer_logic'
 
 export default class PanZoomController {
   private readonly space: HTMLDivElement
@@ -19,6 +10,7 @@ export default class PanZoomController {
   private restoreStyle: string
 
   private wheelLogic: WheelLogic
+  private pointerLogic: PointerLogic
 
   private onViewIsResetChange: (val: boolean) => void
 
@@ -56,6 +48,11 @@ export default class PanZoomController {
     this.resize()
 
     this.wheelLogic = new WheelLogic(this.pan, this.zoomTo)
+    this.pointerLogic = new PointerLogic(
+      this.translateTo,
+      this.zoomTo,
+      this.setTransition
+    )
     this.registerListeners()
     this.resizeObserver.observe(this.space)
   }
@@ -119,16 +116,13 @@ export default class PanZoomController {
       passive: false,
     })
     this.space.addEventListener('pointerdown', this.pointerDownHandler, {
-      passive: false,
-      capture: true,
+      passive: true,
     })
   }
 
   private removeListeners = () => {
     this.space.removeEventListener('wheel', this.wheelHandler)
-    this.space.removeEventListener('pointerdown', this.pointerDownHandler, {
-      capture: true,
-    })
+    this.space.removeEventListener('pointerdown', this.pointerDownHandler)
   }
 
   /*** WHEEL zoom & scroll ***/
@@ -147,19 +141,7 @@ export default class PanZoomController {
 
   private pointerDownHandler = (e: PointerEvent) => {
     this.update()
-    switch (e.pointerType) {
-      case 'mouse':
-        break
-      case 'pen':
-        break
-      case 'touch':
-        this.resetView()
-        break
-      default:
-        console.warn(`unknown device: ${e.pointerType}`)
-    }
-    e.preventDefault()
-    e.stopPropagation()
+    this.pointerLogic.pointerDown(e, this.trans)
   }
 
   /*****
