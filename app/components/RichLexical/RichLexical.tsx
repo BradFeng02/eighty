@@ -192,10 +192,6 @@ const RichLexical = ({
     ...initConfig,
   }
 
-  const placeholderStyle: VarStyle = {
-    '--placeholder-text': `"${placeholder}"`,
-  }
-
   const show = initialShow.current || showPlaceholder
   const showClass = show ? `${styles.show}` : ''
   const placeholderLineClasses = hideEmptyLine
@@ -203,10 +199,7 @@ const RichLexical = ({
     : `${styles.placeholderLine} ${showClass}`
 
   return (
-    <div
-      className={`relative ${styles.container} ${containerClass}`}
-      style={placeholderStyle}
-    >
+    <div className={`relative ${styles.container} ${containerClass}`}>
       <LexicalComposer initialConfig={initialConfig}>
         <RichTextPlugin
           contentEditable={

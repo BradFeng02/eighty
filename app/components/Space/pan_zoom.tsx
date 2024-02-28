@@ -1,4 +1,4 @@
-import { Point2, clamp } from '@/app/utils'
+import { Point2, clamp, fequals } from '@/app/utils'
 import { RefObject } from 'react'
 import { PADDING, Transition, setTransition } from './pan_zoom_utils'
 import WheelLogic from './wheel_logic'
@@ -26,6 +26,10 @@ export default class PanZoomController {
   private nodeMid: Point2
   private spaceQuarter = new Point2(0, 0) // set in resize
   private nodeHalf: Point2
+
+  /*****
+   *****    CONTRUCTOR AND DETSTRUCTOR
+   *****/
 
   constructor(
     container: RefObject<HTMLDivElement>,
@@ -55,13 +59,20 @@ export default class PanZoomController {
     )
     this.registerListeners()
     this.resizeObserver.observe(this.space)
+
+    this.animate()
   }
 
   readonly destroy = () => {
+    this.stopAnimation()
     this.resizeObserver.disconnect()
     this.removeListeners()
     this.node.style.cssText = this.restoreStyle
   }
+
+  /*****
+   *****    RESIZE AND POSITION CHANGE
+   *****/
 
   private resizeObserver = new ResizeObserver(() => this.resize())
   private resize = () => {
@@ -84,7 +95,6 @@ export default class PanZoomController {
     if (newscale <= 0) return // wonky when too small
     const oldscale = this.scale
     this.scale = newscale
-    this.node.style.transform = `scale(${this.scale})`
     this.max_zoom = Math.max(3 / this.scale, 2)
     this.target_zoom = Math.max(2 / this.scale, 1.3)
 
@@ -94,8 +104,11 @@ export default class PanZoomController {
       this.zoomBy(oldscale / this.scale)
       this.pan(0, 0) // need to stay in bounds
     }
+
+    this.animateInstant()
   }
 
+  ///// position change
   private update = () => {
     const spaceRect = this.space.getBoundingClientRect()
     const dx = spaceRect.x - this.spacePos.x
@@ -125,23 +138,107 @@ export default class PanZoomController {
     this.space.removeEventListener('pointerdown', this.pointerDownHandler)
   }
 
-  /*** WHEEL zoom & scroll ***/
-
   private wheelHandler = (e: WheelEvent) => {
     this.update()
     if (this.wheelLogic.wheel(e)) {
       this.setViewIsReset(false)
       this.setTransition(Transition.Fast)
+      this.animate()
     }
     e.stopPropagation()
     e.preventDefault()
   }
 
-  /*** POINTER ***/
-
   private pointerDownHandler = (e: PointerEvent) => {
     this.update()
     this.pointerLogic.pointerDown(e, this.trans)
+  }
+
+  /*****
+   *****    ANIMATION
+   *****/
+
+  private $zoom = 0 // animated values
+  private $trans = new Point2(0, 0)
+  private _zoom = 0 // ease start values
+  private _trans = new Point2(0, 0)
+  private oldZoom = 1 // store previous values
+  private oldTrans = new Point2(0, 0)
+
+  private animationRequestID = 0 // non-zero
+  private easeStartTime = 0
+
+  private animate = () => {
+    // return if nothing changed
+    if (this.viewSame(this.trans, this.oldTrans, this.zoom, this.oldZoom))
+      return
+
+    const time = performance.now()
+
+    // leftover movement before restarting easing
+    if (this.animationRequestID) {
+      const dt = time - this.easeStartTime
+      this.animateVals(dt, this._trans, this.oldTrans, this._zoom, this.oldZoom)
+    }
+
+    // restart easing with new end values
+    this.easeStartTime = time
+    this._zoom = this.$zoom // start at where animation left off
+    this._trans.set(this.$trans.x, this.$trans.y) // start at where animation left off
+    this.oldZoom = this.zoom
+    this.oldTrans.set(this.trans.x, this.trans.y)
+
+    // start animation if not running
+    if (!this.animationRequestID)
+      this.animationRequestID = requestAnimationFrame(this._frame)
+  }
+
+  private stopAnimation = () => {
+    cancelAnimationFrame(this.animationRequestID)
+    this.animationRequestID = 0
+  }
+
+  private _frame: FrameRequestCallback = (_) => {
+    // stop animation if done
+    if (this.viewSame(this.trans, this.$trans, this.zoom, this.$zoom)) {
+      this.animationRequestID = 0
+      return
+    }
+    this.animationRequestID = requestAnimationFrame(this._frame)
+    this._animation(performance.now()) // animation frame time is wacky
+  }
+
+  private _animation = (time: number) => {
+    const dt = time - this.easeStartTime
+    this.animateVals(dt, this._trans, this.trans, this._zoom, this.zoom)
+    this.node.style.translate = `${this.$trans.x}px ${this.$trans.y}px`
+    this.node.style.scale = (this.$zoom * this.scale).toString()
+  }
+
+  private animateVals = (
+    dt: number,
+    transStart: Point2,
+    transEnd: Point2,
+    zoomStart: number,
+    zoomEnd: number
+  ) => {
+    const ease = this.easeOutCubic(dt / 150)
+    const dx = transEnd.x - transStart.x
+    const dy = transEnd.y - transStart.y
+    const dz = zoomEnd - zoomStart
+    this.$trans.set(transStart.x + dx * ease, transStart.y + dy * ease)
+    this.$zoom = zoomStart + dz * ease
+  }
+
+  private animateInstant = () => {
+    this.$trans.set(this.trans.x, this.trans.y)
+    this.$zoom = this.zoom
+    this.node.style.translate = `${this.$trans.x}px ${this.$trans.y}px`
+    this.node.style.scale = (this.$zoom * this.scale).toString()
+  }
+
+  private easeOutCubic = (t: number) => {
+    return clamp(1 - (1 - t) ** 3, 0, 1)
   }
 
   /*****
@@ -163,17 +260,15 @@ export default class PanZoomController {
     const clampdy = clamp(this.trans.y + dy, -by, by) - this.trans.y
     this.trans.move(clampdx, clampdy)
     this.nodeMid.move(clampdx, clampdy)
-    this.node.style.translate = `${this.trans.x}px ${this.trans.y}px`
+  }
+
+  private zoomBy = (factor: number) => {
+    this.zoom = clamp(this.zoom * factor, this.min_zoom, this.max_zoom)
   }
 
   // function to pan to given trans
   private translateTo = (tx: number, ty: number) => {
     this.pan(tx - this.trans.x, ty - this.trans.y)
-  }
-
-  private zoomBy = (factor: number) => {
-    this.zoom = clamp(this.zoom * factor, this.min_zoom, this.max_zoom)
-    this.node.style.scale = this.zoom.toString()
   }
 
   private zoomTo = (factor: number, originX: number, originY: number) => {
@@ -201,9 +296,12 @@ export default class PanZoomController {
 
   private transition: Transition | undefined
   private setTransition = (speed: Transition) => {
-    if (this.transition !== speed) {
-      setTransition(this.node, speed)
-      this.transition = speed
-    }
+    // if (this.transition !== speed) {
+    //   setTransition(this.node, speed)
+    //   this.transition = speed
+    // }
   }
+
+  private viewSame = (a: Point2, b: Point2, c: number, d: number) =>
+    fequals(c, d, 1000) && a.equals(b, 100000)
 }
