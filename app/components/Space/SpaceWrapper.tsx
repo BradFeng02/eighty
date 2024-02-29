@@ -27,8 +27,7 @@ const SpaceWrapper = ({ wid, hgt, children }: Props) => {
   return (
     <div className="h-full w-full touch-none overflow-clip" ref={container}>
       <div
-        ref={wrapper}
-        className={`relative border-4 ${viewIsReset ? 'border-blue-700' : 'border-gray-600'} bg-white transition-opacity ${hide ? 'opacity-0' : ''}`}
+        className="relative touch-none overflow-visible"
         style={{
           width: wid * GRID_SIZE_PX,
           height: hgt * GRID_SIZE_PX,
@@ -36,7 +35,12 @@ const SpaceWrapper = ({ wid, hgt, children }: Props) => {
           top: `calc((100% - ${hgt * GRID_SIZE_PX}px) / 2.0)`,
         }}
       >
-        {children}
+        <div
+          ref={wrapper}
+          className={`h-full w-full border-4 ${viewIsReset ? 'border-blue-700' : 'border-gray-600'} bg-white transition-opacity ${hide ? 'opacity-0' : ''}`}
+        >
+          {children}
+        </div>
       </div>
     </div>
   )
