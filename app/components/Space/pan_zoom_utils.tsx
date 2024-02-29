@@ -5,72 +5,54 @@ export const TAP_DEADZONE = 10
 export const DOUBLE_TAP_DEADZONE = 30
 export const DOUBLE_TAP_MS = 500
 
-///// transition
+///// animation easing
 
-const SMOOTH_TRANSITION_PROP = 'opacity, scale, translate'
-const NO_TRANSITION_PROP = 'none'
-const SLOW_TRANSITION = '500ms'
-const FAST_TRANSITION = '150ms'
-const SLOW_TIMING = 'ease'
-const FAST_TIMING = 'cubic-bezier(0, 0, 0.2, 1)'
-
-export enum Transition {
+export enum Ease {
   None,
   Fast,
-  Slow,
+  Normal,
 }
 
-export const setTransition = (node: HTMLElement, speed: Transition) => {
-  switch (speed) {
-    case Transition.None:
-      node.style.transitionProperty = NO_TRANSITION_PROP
-      break
-    case Transition.Fast:
-      node.style.transitionProperty = SMOOTH_TRANSITION_PROP
-      node.style.transitionDuration = FAST_TRANSITION
-      node.style.transitionTimingFunction = FAST_TIMING
-      break
-    case Transition.Slow:
-      node.style.transitionProperty = SMOOTH_TRANSITION_PROP
-      node.style.transitionDuration = SLOW_TRANSITION
-      node.style.transitionTimingFunction = SLOW_TIMING
-      break
+/**
+ * ease value for animation
+ * @param elapsed time since ease start
+ * @returns number [0, 1]
+ */
+export const easeValue = (
+  ease: Ease,
+  elapsed: number,
+  dx: number,
+  dy: number,
+  zoom1: number,
+  zoom2: number
+): number => {
+  switch (ease) {
+    case Ease.None:
+      return 1
+    case Ease.Fast:
+      return quinticEaseOut(elapsed / 100)
+    case Ease.Normal:
+      return dynamicEaseOut(elapsed, dx, dy, zoom1, zoom2)
   }
 }
 
-///// drag pan
-
-export type TranslateFunction = (tx: number, ty: number) => void
-export class dragPanAction {
-  private start: Point2 // pointer down event client coords
-  private from: Point2 // starting translate
-  private transFun: TranslateFunction
-
-  /**
-   * drag start
-   * @param start pointer down event client coords
-   * @param from starting translate
-   * @param translateFun function to pan to given trans (panToInSpace)
-   */
-  constructor(
-    startX: number,
-    startY: number,
-    fromX: number,
-    fromY: number,
-    translateFun: TranslateFunction
-  ) {
-    console.log('drag')
-    this.start = new Point2(startX, startY)
-    this.from = new Point2(fromX, fromY)
-    this.transFun = translateFun
+const dynamicEaseOut = (
+  elapsed: number,
+  dx: number,
+  dy: number,
+  zoom1: number,
+  zoom2: number
+) => {
+  let easeDuration = 250
+  if (zoom1 === zoom2)
+    easeDuration *= clamp(Math.sqrt(dx * dx + dy * dy) / 130, 1, 2)
+  else {
+    const r = zoom1 > zoom2 ? zoom1 / zoom2 : zoom2 / zoom1
+    easeDuration *= clamp(r / 1.3, 1, 2)
   }
+  return quinticEaseOut(elapsed / easeDuration)
+}
 
-  readonly dragMove = (ex: number, ey: number) => {
-    this.transFun(
-      this.from.x + ex - this.start.x,
-      this.from.y + ey - this.start.y
-    )
-  }
-
-  readonly dragEnd = () => {}
+const quinticEaseOut = (t: number) => {
+  return 1 - (1 - clamp(t, 0, 1)) ** 5
 }

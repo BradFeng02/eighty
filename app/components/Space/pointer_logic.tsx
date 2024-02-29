@@ -1,23 +1,23 @@
 import { Point2 } from '@/app/utils'
-import { Transition } from './pan_zoom_utils'
+import { Ease } from './pan_zoom_utils'
 
 type TranslateToFunction = (tx: number, ty: number) => void
 type ZoomToFunction = (factor: number, originX: number, originY: number) => void
-type SetTransitionFunction = (speed: Transition) => void
+type SetEaseFunction = (e: Ease) => void
 
 export default class PointerLogic {
   private translateTo: TranslateToFunction
   private zoomTo: ZoomToFunction
-  private setTransition: SetTransitionFunction
+  private setEase: SetEaseFunction
 
   constructor(
     translateTo: TranslateToFunction,
     zoomTo: ZoomToFunction,
-    setTransition: SetTransitionFunction
+    setEase: SetEaseFunction
   ) {
     this.translateTo = translateTo
     this.zoomTo = zoomTo
-    this.setTransition = setTransition
+    this.setEase = setEase
   }
 
   private currentAction: PointerAction | null = null

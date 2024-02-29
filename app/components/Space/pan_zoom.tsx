@@ -1,6 +1,6 @@
 import { Point2, clamp, fequals } from '@/app/utils'
 import { RefObject } from 'react'
-import { PADDING, Transition, setTransition } from './pan_zoom_utils'
+import { Ease, PADDING, easeValue } from './pan_zoom_utils'
 import WheelLogic from './wheel_logic'
 import PointerLogic from './pointer_logic'
 
@@ -44,22 +44,22 @@ export default class PanZoomController {
     this.space = container.current
     this.node = wrapper.current
     this.restoreStyle = this.node.style.cssText
-    this.setTransition(Transition.Fast)
 
     const nodeRect = this.node.getBoundingClientRect() // won't change size
     this.nodeHalf = new Point2(nodeRect.width / 2, nodeRect.height / 2)
     this.nodeMid = new Point2(0, 0) // will be moved in resize, must start centered
     this.resize()
 
-    this.wheelLogic = new WheelLogic(this.pan, this.zoomTo)
+    this.wheelLogic = new WheelLogic(this.pan, this.zoomTo, this.setEase)
     this.pointerLogic = new PointerLogic(
       this.translateTo,
       this.zoomTo,
-      this.setTransition
+      this.setEase
     )
     this.registerListeners()
     this.resizeObserver.observe(this.space)
 
+    this.setEase(Ease.None)
     this.animate()
   }
 
@@ -100,7 +100,6 @@ export default class PanZoomController {
 
     // if shifted or zoomed in/out, keep focus centered and size same
     if (!this.viewIsReset()) {
-      this.setTransition(Transition.None)
       this.zoomBy(oldscale / this.scale)
       this.pan(0, 0) // need to stay in bounds
     }
@@ -142,7 +141,6 @@ export default class PanZoomController {
     this.update()
     if (this.wheelLogic.wheel(e)) {
       this.setViewIsReset(false)
-      this.setTransition(Transition.Fast)
       this.animate()
     }
     e.stopPropagation()
@@ -167,27 +165,36 @@ export default class PanZoomController {
 
   private animationRequestID = 0 // non-zero
   private easeStartTime = 0
+  private _ease: Ease = Ease.Normal
 
-  private animate = () => {
-    // return if nothing changed
-    if (this.viewSame(this.trans, this.oldTrans, this.zoom, this.oldZoom))
-      return
+  private setEase = (e: Ease) => {
+    if (e !== this._ease) {
+      this.restartEase()
+      this._ease = e
+    }
+  }
 
+  private restartEase = () => {
     const time = performance.now()
-
     // leftover movement before restarting easing
     if (this.animationRequestID) {
       const dt = time - this.easeStartTime
       this.animateVals(dt, this._trans, this.oldTrans, this._zoom, this.oldZoom)
     }
-
     // restart easing with new end values
     this.easeStartTime = time
     this._zoom = this.$zoom // start at where animation left off
     this._trans.set(this.$trans.x, this.$trans.y) // start at where animation left off
     this.oldZoom = this.zoom
     this.oldTrans.set(this.trans.x, this.trans.y)
+  }
 
+  private animate = () => {
+    // return if nothing changed
+    if (this.viewSame(this.trans, this.oldTrans, this.zoom, this.oldZoom))
+      return
+    // if something changed...
+    this.restartEase()
     // start animation if not running
     if (!this.animationRequestID)
       this.animationRequestID = requestAnimationFrame(this._frame)
@@ -199,24 +206,24 @@ export default class PanZoomController {
   }
 
   private _frame: FrameRequestCallback = (_) => {
+    this._animation(performance.now()) // animation frame time is wacky
     // stop animation if done
     if (this.viewSame(this.trans, this.$trans, this.zoom, this.$zoom)) {
       this.animationRequestID = 0
       return
     }
     this.animationRequestID = requestAnimationFrame(this._frame)
-    this._animation(performance.now()) // animation frame time is wacky
   }
 
   private _animation = (time: number) => {
-    const dt = time - this.easeStartTime
-    this.animateVals(dt, this._trans, this.trans, this._zoom, this.zoom)
+    const elapsed = time - this.easeStartTime
+    this.animateVals(elapsed, this._trans, this.trans, this._zoom, this.zoom)
     this.node.style.translate = `${this.$trans.x}px ${this.$trans.y}px`
     this.node.style.scale = (this.$zoom * this.scale).toString()
   }
 
   private animateVals = (
-    dt: number,
+    elapsed: number,
     transStart: Point2,
     transEnd: Point2,
     zoomStart: number,
@@ -225,15 +232,9 @@ export default class PanZoomController {
     const dx = transEnd.x - transStart.x
     const dy = transEnd.y - transStart.y
     const dz = zoomEnd - zoomStart
-    let easeDuration = 250
-    if (!dz) easeDuration *= clamp(Math.sqrt(dx * dx + dy * dy) / 130, 1, 2)
-    else {
-      const r = zoomEnd > zoomStart ? zoomEnd / zoomStart : zoomStart / zoomEnd
-      easeDuration *= clamp(r / 1.4, 1, 2)
-    }
-    const ease = this.easeOut(dt / easeDuration)
-    this.$trans.set(transStart.x + dx * ease, transStart.y + dy * ease)
-    this.$zoom = zoomStart + dz * ease
+    const ev = easeValue(this._ease, elapsed, dx, dy, zoomStart, zoomEnd)
+    this.$trans.set(transStart.x + dx * ev, transStart.y + dy * ev)
+    this.$zoom = zoomStart + dz * ev
   }
 
   private animateInstant = () => {
@@ -241,10 +242,6 @@ export default class PanZoomController {
     this.$zoom = this.zoom
     this.node.style.translate = `${this.$trans.x}px ${this.$trans.y}px`
     this.node.style.scale = (this.$zoom * this.scale).toString()
-  }
-
-  private easeOut = (t: number) => {
-    return 1 - (1 - clamp(t, 0, 1)) ** 5
   }
 
   /*****
@@ -298,14 +295,6 @@ export default class PanZoomController {
   setViewIsReset = (val: boolean) => {
     this._viewIsReset = val
     this.onViewIsResetChange(val)
-  }
-
-  private transition: Transition | undefined
-  private setTransition = (speed: Transition) => {
-    // if (this.transition !== speed) {
-    //   setTransition(this.node, speed)
-    //   this.transition = speed
-    // }
   }
 
   private viewSame = (a: Point2, b: Point2, c: number, d: number) =>

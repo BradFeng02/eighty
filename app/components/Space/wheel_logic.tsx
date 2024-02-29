@@ -1,15 +1,23 @@
 import { Point2, clamp } from '@/app/utils'
+import { Ease } from './pan_zoom_utils'
 
 type PanFunction = (dx: number, dy: number) => void
 type ZoomToFunction = (factor: number, originX: number, originY: number) => void
+type SetEaseFunction = (e: Ease) => void
 
 export default class WheelLogic {
   private pan: PanFunction
   private zoomTo: ZoomToFunction
+  private setEase: SetEaseFunction
 
-  constructor(pan: PanFunction, zoomTo: ZoomToFunction) {
+  constructor(
+    pan: PanFunction,
+    zoomTo: ZoomToFunction,
+    setEase: SetEaseFunction
+  ) {
     this.pan = pan
     this.zoomTo = zoomTo
+    this.setEase = setEase
   }
 
   private lastWheelTime: number = -1000
@@ -47,6 +55,8 @@ export default class WheelLogic {
       if (magX) this.wheelMagX = magX
       if (magY) this.wheelMagY = magY
     }
+
+    this.setEase(wheel ? Ease.Normal : Ease.Fast)
 
     // scroll
     if (!e.ctrlKey && (dx || dy)) {
