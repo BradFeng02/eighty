@@ -14,6 +14,8 @@ export default class WheelLogic {
 
   private lastWheelTime: number = -1000
   private lastMag = new Point2(-1, -1)
+  private wheelMagX = 0.11111111111
+  private wheelMagY = 0.11111111111
 
   /**
    * @returns true if view changed
@@ -40,28 +42,45 @@ export default class WheelLogic {
     // if ever not wheel, disable possibility for rest of scroll
     else this.lastMag.set(0.11111111111, 0.11111111111)
 
+    // store wheel magnitude to predict unknown
+    if (!unkn && wheel) {
+      if (magX) this.wheelMagX = magX
+      if (magY) this.wheelMagY = magY
+    }
+
     // scroll
     if (!e.ctrlKey && (dx || dy)) {
-      //     just dx if 0     clamp if unknown     step if wheel   else smooth
-      const panx = dx && (unkn ? clmp(dx) : wheel ? scrollStep(dx) : dx)
-      const pany = dy && (unkn ? clmp(dy) : wheel ? scrollStep(dy) : dy)
+      //      just dx if 0    unknown (clamp or step)    step if wheel    else smooth
+      const panx = dx && (unkn ? this.xUnk(dx) : wheel ? scrollStep(dx) : dx)
+      const pany = dy && (unkn ? this.yUnk(dy) : wheel ? scrollStep(dy) : dy)
       this.pan(-panx, -pany)
       return true
     }
     // zoom
     else if (e.ctrlKey && dy) {
-      const zoomAmt = unkn ? zlim(dy) : wheel ? ZOOM_STEP : Math.abs(dy)
+      const zoomAmt = unkn ? this.zUnk(dy) : wheel ? ZOOM_STEP : Math.abs(dy)
       const factor = 1 + zoomAmt / 100
       this.zoomTo(dy < 0 ? factor : 1 / factor, e.clientX, e.clientY)
       return true
     }
     return false
   }
+
+  ///// utils
+
+  private xUnk = (dx: number) => scrollUnk(dx, this.wheelMagX)
+  private yUnk = (dy: number) => scrollUnk(dy, this.wheelMagY)
+  private zUnk = (dy: number) => {
+    const abs = Math.abs(dy)
+    if (abs > WHEEL_THRESH && sameMag(abs, this.wheelMagY)) return ZOOM_STEP
+    return Math.min(abs, ZOOM_STEP)
+  }
 }
 
 ///// utils
 
-const SCROLL_STEP = 50
+const WHEEL_THRESH = 30
+const SCROLL_STEP = 70
 const ZOOM_STEP = 15
 const SCROLL_WINDOW_MS = 100
 
@@ -86,17 +105,19 @@ const adjustWheel = (
 ): WheelType => {
   if (!delta) return WheelType.Unknown // skip 0
   // if big enough and same magnitude, likely wheel -> fixed step
-  if (
-    mag > SCROLL_STEP &&
-    lastMag > SCROLL_STEP &&
-    (mag % lastMag === 0 || lastMag % mag === 0) // lag sometimes multiple
-  )
+  if (mag > WHEEL_THRESH && lastMag > WHEEL_THRESH && sameMag(mag, lastMag))
     return WheelType.Wheel
   // starting new scroll -> clamp in case is wheel (big delta)
   if (elapsed > SCROLL_WINDOW_MS) return WheelType.Unknown
   return WheelType.Smooth
 }
 
-const clmp = (d: number) => clamp(d, -SCROLL_STEP, SCROLL_STEP)
+// mag is sometimes a multiple because batched
+const sameMag = (a: number, b: number) => (a > b ? a % b === 0 : b % a === 0)
+
+const scrollUnk = (d: number, wheelmag: number) => {
+  const abs = Math.abs(d)
+  if (abs > WHEEL_THRESH && sameMag(abs, wheelmag)) return scrollStep(d)
+  return clamp(d, -SCROLL_STEP, SCROLL_STEP)
+}
 const scrollStep = (d: number) => SCROLL_STEP * Math.sign(d)
-const zlim = (dy: number) => Math.min(Math.abs(dy), ZOOM_STEP)

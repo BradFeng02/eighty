@@ -225,13 +225,13 @@ export default class PanZoomController {
     const dx = transEnd.x - transStart.x
     const dy = transEnd.y - transStart.y
     const dz = zoomEnd - zoomStart
-    let easeDuration = 200
+    let easeDuration = 250
     if (!dz) easeDuration *= clamp(Math.sqrt(dx * dx + dy * dy) / 130, 1, 2)
     else {
       const r = zoomEnd > zoomStart ? zoomEnd / zoomStart : zoomStart / zoomEnd
       easeDuration *= clamp(r / 1.4, 1, 2)
     }
-    const ease = this.easeOutCubic(dt / easeDuration)
+    const ease = this.easeOut(dt / easeDuration)
     this.$trans.set(transStart.x + dx * ease, transStart.y + dy * ease)
     this.$zoom = zoomStart + dz * ease
   }
@@ -243,8 +243,8 @@ export default class PanZoomController {
     this.node.style.scale = (this.$zoom * this.scale).toString()
   }
 
-  private easeOutCubic = (t: number) => {
-    return 1 - (1 - clamp(t, 0, 1)) ** 4
+  private easeOut = (t: number) => {
+    return 1 - (1 - clamp(t, 0, 1)) ** 5
   }
 
   /*****
