@@ -4,20 +4,24 @@ import { Ease } from './pan_zoom_utils'
 type TranslateToFunction = (tx: number, ty: number) => void
 type ZoomToFunction = (factor: number, originX: number, originY: number) => void
 type SetEaseFunction = (e: Ease) => void
+type AnimateFunction = () => void
 
 export default class PointerLogic {
   private translateTo: TranslateToFunction
   private zoomTo: ZoomToFunction
   private setEase: SetEaseFunction
+  private animate: AnimateFunction
 
   constructor(
     translateTo: TranslateToFunction,
     zoomTo: ZoomToFunction,
-    setEase: SetEaseFunction
+    setEase: SetEaseFunction,
+    animate: AnimateFunction
   ) {
     this.translateTo = translateTo
     this.zoomTo = zoomTo
     this.setEase = setEase
+    this.animate = animate
   }
 
   private currentAction: PointerAction | null = null
@@ -37,7 +41,7 @@ export default class PointerLogic {
         this.start.set(e.clientX, e.clientY)
         this.from.set(trans.x, trans.y)
         this.isTap = true
-        this.setTransition(Transition.Fast)
+        this.setEase(Ease.Fast)
         this.currentAction = startAction(
           this.penDrag,
           this.penDragStop,
@@ -69,20 +73,23 @@ export default class PointerLogic {
     if (this.isTap) {
       if (!this.inDeadzone(e.clientX, e.clientY)) this.isTap = false
     } else {
-      this.setTransition(Transition.None) // allows first move to catch up smoothly
+      this.setEase(Ease.Least) // allows first move to catch up smoothly
     }
-    if (!this.isTap)
+    if (!this.isTap) {
       this.translateTo(
         this.from.x + e.clientX - this.start.x,
         this.from.y + e.clientY - this.start.y
       )
+      this.animate()
+    }
     this.temp.set(e.clientX, e.clientY)
   }
 
   private penDragStop = (e: PointerEvent) => {
     if (e.type === 'pointercancel') {
-      this.setTransition(Transition.None)
+      this.setEase(Ease.None)
       this.translateTo(this.from.x, this.from.y)
+      this.animate()
     }
     console.log(e.type + ' ' + e.clientX + ',' + e.clientY)
 

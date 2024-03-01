@@ -9,8 +9,9 @@ export const DOUBLE_TAP_MS = 500
 
 export enum Ease {
   None,
+  Least,
   Fast,
-  Normal,
+  Smooth,
 }
 
 /**
@@ -29,9 +30,11 @@ export const easeValue = (
   switch (ease) {
     case Ease.None:
       return 1
+    case Ease.Least:
+      return quadEaseOut(elapsed / 25)
     case Ease.Fast:
-      return quinticEaseOut(elapsed / 100)
-    case Ease.Normal:
+      return quadEaseOut(elapsed / 50)
+    case Ease.Smooth:
       return dynamicEaseOut(elapsed, dx, dy, zoom1, zoom2)
   }
 }
@@ -53,6 +56,6 @@ const dynamicEaseOut = (
   return quinticEaseOut(elapsed / easeDuration)
 }
 
-const quinticEaseOut = (t: number) => {
-  return 1 - (1 - clamp(t, 0, 1)) ** 5
-}
+const quadEaseOut = (t: number) => 1 - (1 - clamp(t, 0, 1)) ** 2
+
+const quinticEaseOut = (t: number) => 1 - (1 - clamp(t, 0, 1)) ** 5

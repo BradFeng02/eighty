@@ -56,7 +56,7 @@ export default class WheelLogic {
       if (magY) this.wheelMagY = magY
     }
 
-    this.setEase(wheel ? Ease.Normal : Ease.Fast)
+    this.setEase(wheel ? Ease.Smooth : Ease.Fast)
 
     // scroll
     if (!e.ctrlKey && (dx || dy)) {

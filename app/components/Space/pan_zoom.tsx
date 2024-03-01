@@ -54,7 +54,8 @@ export default class PanZoomController {
     this.pointerLogic = new PointerLogic(
       this.translateTo,
       this.zoomTo,
-      this.setEase
+      this.setEase,
+      this.animate
     )
     this.registerListeners()
     this.resizeObserver.observe(this.space)
@@ -165,7 +166,7 @@ export default class PanZoomController {
 
   private animationRequestID = 0 // non-zero
   private easeStartTime = 0
-  private _ease: Ease = Ease.Normal
+  private _ease: Ease = Ease.Smooth
 
   private setEase = (e: Ease) => {
     if (e !== this._ease) {
@@ -231,10 +232,9 @@ export default class PanZoomController {
   ) => {
     const dx = transEnd.x - transStart.x
     const dy = transEnd.y - transStart.y
-    const dz = zoomEnd - zoomStart
     const ev = easeValue(this._ease, elapsed, dx, dy, zoomStart, zoomEnd)
     this.$trans.set(transStart.x + dx * ev, transStart.y + dy * ev)
-    this.$zoom = zoomStart + dz * ev
+    this.$zoom = zoomStart + (zoomEnd - zoomStart) * ev
   }
 
   private animateInstant = () => {
