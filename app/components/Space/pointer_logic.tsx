@@ -1,60 +1,26 @@
-import { Point2, dist, p2dist } from '@/app/utils'
-import { Ease } from './pan_zoom_utils'
-
-type GetTransFunction = () => Point2
-type GetZoomFunction = () => number
-type SetTranslateFunction = (tx: number, ty: number) => void
-type SetZoomToFunction = (z: number, originX: number, originY: number) => void
-type ManipViewFunction = (
-  zf: number,
-  z: number,
-  fromX: number,
-  fromY: number,
-  toX: number,
-  toY: number,
-  nmx: number,
-  nmy: number
-) => void
-type SetEaseFunction = (e: Ease) => void
-type AnimateFunction = () => void
-type ViewIsResetFunction = () => boolean
-type SetViewIsResetFunction = (val: boolean) => void
+import { Point2, p2dist } from '@/app/utils'
+import { Ease, ViewState, dummyViewState, Fn } from './pan_zoom_utils'
 
 export default class PointerLogic {
-  private getTrans: GetTransFunction
-  private getZoom: GetZoomFunction
-  private setTranslate: SetTranslateFunction
-  private setZoomTo: SetZoomToFunction
-  private manipView: ManipViewFunction
-  private setEase: SetEaseFunction
-  private animate: AnimateFunction
-  private viewIsReset: ViewIsResetFunction
-  private setViewIsReset: SetViewIsResetFunction
+  private getTrans: Fn.GetTrans
+  private saveView: Fn.SaveView
+  private setTranslate: Fn.SetTranslate
+  private manipView: Fn.ManipView
+  private setEase: Fn.SetEase
+  private animate: Fn.Animate
+  private viewIsReset: Fn.ViewIsReset
+  private setViewIsReset: Fn.SetViewIsReset
 
-  private getnodemid
-
-  constructor(
-    getTrans: GetTransFunction,
-    getZoom: GetZoomFunction,
-    setTranslate: SetTranslateFunction,
-    setZoomTo: SetZoomToFunction,
-    manipView: ManipViewFunction,
-    setEase: SetEaseFunction,
-    animate: AnimateFunction,
-    viewIsReset: ViewIsResetFunction,
-    setViewIsReset: SetViewIsResetFunction,
-    getnodemid: () => Point2
-  ) {
+  // prettier-ignore
+  constructor( getTrans: Fn.GetTrans, saveView: Fn.SaveView, setTranslate: Fn.SetTranslate, manipView: Fn.ManipView, setEase: Fn.SetEase, animate: Fn.Animate, viewIsReset: Fn.ViewIsReset, setViewIsReset: Fn.SetViewIsReset) {
     this.getTrans = getTrans
-    this.getZoom = getZoom
+    this.saveView = saveView
     this.setTranslate = setTranslate
-    this.setZoomTo = setZoomTo
     this.manipView = manipView
     this.setEase = setEase
     this.animate = animate
     this.viewIsReset = viewIsReset
     this.setViewIsReset = setViewIsReset
-    this.getnodemid = getnodemid
   }
 
   private currentAction: PointerAction | null = null
@@ -68,7 +34,6 @@ export default class PointerLogic {
 
     switch (e.pointerType) {
       case 'pen':
-      // if (e.target instanceof HTMLElement && e.target.isContentEditable) break
       case 'touch':
         this.start.set(e.clientX, e.clientY)
         this.from.setTo(this.getTrans())
@@ -80,8 +45,6 @@ export default class PointerLogic {
 
     switch (e.pointerType) {
       case 'mouse':
-        console.log(e.clientX + ' ' + e.clientY);
-        
         break
       case 'pen':
         this.currentAction = this.startAction(
@@ -138,15 +101,13 @@ export default class PointerLogic {
 
   ///// TOUCH MANIP
 
-  private touch1: number | null = null
+  private touch1: number | null = null // pointer id
   private touch2: number | null = null
-  private touchStart1: Point2 = new Point2(0, 0)
-  private touchStart2: Point2 = new Point2(0, 0)
-  private startDist = 0 // dist btwn 2 fingers
-  private zoomFrom = 0
-  private touchNow1: Point2 = new Point2(0, 0)
-  private touchNow2: Point2 = new Point2(0, 0)
-  private testnodemid: Point2 = new Point2(0, 0)
+  private touchPos1: Point2 = new Point2(0, 0) // current touch positions
+  private touchPos2: Point2 = new Point2(0, 0)
+  // starting values for 2 fingers:
+  private distStart: number = 0 // dist between touches
+  private viewStart: ViewState = dummyViewState() // view state
 
   // extra work for touch down
   private touchDown = (e: PointerEvent) => {
@@ -157,44 +118,28 @@ export default class PointerLogic {
     this.trackTouches(e)
     // one finger drag
     if (e.pointerId === this.touch1 && this.touch2 === null) {
+      this.touchPos1.set(e.clientX, e.clientY)
       this.dragHelper(e)
-      this.touchNow1.set(e.clientX, e.clientY)
     }
     // two finger manip, finger 1
     else if (e.pointerId === this.touch1) {
-      this.touchNow1.set(e.clientX, e.clientY)
+      this.touchPos1.set(e.clientX, e.clientY)
       this.twoFingerManip()
     }
     // two finger manip, finger 2
     else if (e.pointerId === this.touch2) {
-      this.touchNow2.set(e.clientX, e.clientY)
+      this.touchPos2.set(e.clientX, e.clientY)
       this.twoFingerManip()
     }
   }
 
   private twoFingerManip = () => {
-    const midx = (this.touchNow1.x + this.touchNow2.x) / 2
-    const midy = (this.touchNow1.y + this.touchNow2.y) / 2
-
-    const factor = p2dist(this.touchNow1, this.touchNow2) / this.startDist
-    // console.log(midx + ' '+ midy);
-
-    // this.setZoomTo(this.zoomFrom * factor, midx, midy)
-    // this.setTranslate(
-    //   this.from.x + midx - this.start.x,
-    //   this.from.y + midy - this.start.y
-    // )
+    const factor = p2dist(this.touchPos1, this.touchPos2) / this.distStart
+    // prettier-ignore
     this.manipView(
-      this.zoomFrom,
-      this.zoomFrom * factor,
-      this.start.x,
-      this.start.y,
-      midx,
-      midy,
-      this.testnodemid.x,
-      this.testnodemid.y,
-      this.from.x,
-      this.from.y
+      this.viewStart, this.start, factor,
+      (this.touchPos1.x + this.touchPos2.x) / 2,
+      (this.touchPos1.y + this.touchPos2.y) / 2
     )
     this.animate()
   }
@@ -205,18 +150,17 @@ export default class PointerLogic {
     // drop second finger
     if (e.pointerId === this.touch2) {
       this.touch2 = null
-      this.restartFrom(this.touchNow1.x, this.touchNow1.y)
+      this.restartFrom(this.touchPos1.x, this.touchPos1.y)
     }
     // drop first finger
     else if (e.pointerId === this.touch1) {
       this.touch1 = null
+      // second finger replace first
       if (this.touch2 !== null) {
-        // second finger replace first
         this.touch1 = this.touch2
         this.touch2 = null
-        this.touchStart1.setTo(this.touchStart2)
-        this.touchNow1.setTo(this.touchNow2)
-        this.restartFrom(this.touchNow1.x, this.touchNow1.y)
+        this.touchPos1.setTo(this.touchPos2)
+        this.restartFrom(this.touchPos1.x, this.touchPos1.y)
       }
     }
     // all fingers up
@@ -227,21 +171,18 @@ export default class PointerLogic {
     if (this.touch1 === null) {
       // first finger
       this.touch1 = e.pointerId
-      this.touchStart1.set(e.clientX, e.clientY)
-      this.touchNow1.set(e.clientX, e.clientY)
+      this.touchPos1.set(e.clientX, e.clientY)
     } else if (this.touch2 === null && e.pointerId !== this.touch1) {
       // second finger
       this.touch2 = e.pointerId
-      this.touchStart2.set(e.clientX, e.clientY)
-      this.touchNow2.set(e.clientX, e.clientY)
+      this.touchPos2.set(e.clientX, e.clientY)
       // start moving from midpoint of fingers
       this.restartFrom(
-        (this.touchNow1.x + this.touchNow2.x) / 2,
-        (this.touchNow1.y + this.touchNow2.y) / 2
+        (this.touchPos1.x + this.touchPos2.x) / 2,
+        (this.touchPos1.y + this.touchPos2.y) / 2
       )
-      this.startDist = p2dist(this.touchNow1, this.touchNow2)
-      this.zoomFrom = this.getZoom()
-      this.testnodemid.setTo(this.getnodemid())
+      this.distStart = p2dist(this.touchPos1, this.touchPos2)
+      this.viewStart = this.saveView()
     }
   }
 

@@ -1,6 +1,6 @@
 import { Point2, clamp, fequals } from '@/app/utils'
 import { RefObject } from 'react'
-import { Ease, PADDING, easeValue } from './pan_zoom_utils'
+import { Ease, PADDING, ViewState, easeValue } from './pan_zoom_utils'
 import WheelLogic from './wheel_logic'
 import PointerLogic from './pointer_logic'
 
@@ -50,19 +50,9 @@ export default class PanZoomController {
     this.nodeMid = new Point2(0, 0) // will be moved in resize, must start centered
     this.resize()
 
+    // prettier-ignore
+    this.pointerLogic = new PointerLogic(() => this.trans, this.saveView, this.setTranslate, this.manipView, this.setEase, this.animate, this.viewIsReset, this.setViewIsReset)
     this.wheelLogic = new WheelLogic(this.pan, this.zoomTo, this.setEase)
-    this.pointerLogic = new PointerLogic(
-      () => this.trans,
-      () => this.zoom,
-      this.setTranslate,
-      this.setZoomTo,
-      this.manipView,
-      this.setEase,
-      this.animate,
-      this.viewIsReset,
-      this.setViewIsReset,
-      () => this.nodeMid
-    )
     this.registerListeners()
     this.resizeObserver.observe(this.space)
 
@@ -226,13 +216,8 @@ export default class PanZoomController {
     this.node.style.scale = (this.$zoom * this.scale).toString()
   }
 
-  private animateVals = (
-    elapsed: number,
-    transStart: Point2,
-    transEnd: Point2,
-    zoomStart: number,
-    zoomEnd: number
-  ) => {
+  // prettier-ignore
+  private animateVals = (elapsed: number, transStart: Point2, transEnd: Point2, zoomStart: number, zoomEnd: number) => {
     const dx = transEnd.x - transStart.x
     const dy = transEnd.y - transStart.y
     const ev = easeValue(this._ease, elapsed, dx, dy, zoomStart, zoomEnd)
@@ -281,43 +266,25 @@ export default class PanZoomController {
     this.pan(tx - this.trans.x, ty - this.trans.y)
   }
 
-  private setZoomTo = (z: number, originX: number, originY: number) => {
-    this.zoomTo(z / this.zoom, originX, originY)
-  }
-
   private zoomTo = (factor: number, originX: number, originY: number) => {
     const startZoom = this.zoom
     this.zoomBy(factor)
     const zoomed = this.zoom / startZoom // may be clamped
-
-    const dx = (zoomed - 1) * (this.nodeMid.x - originX)
-    const dy = (zoomed - 1) * (this.nodeMid.y - originY)
-    this.pan(dx, dy)
+    this.pan(
+      (zoomed - 1) * (this.nodeMid.x - originX),
+      (zoomed - 1) * (this.nodeMid.y - originY)
+    )
   }
 
-  // point from at zoom zf -> point to at zoom z
-  private manipView = (
-    zf: number,
-    z: number,
-    fromX: number,
-    fromY: number,
-    toX: number,
-    toY: number,
-    nmx: number,
-    nmy: number,
-    transx: number,
-    transy: number
-  ) => {
-    const dx = fromX - nmx
-    const dy = fromY - nmy
-    this.zoomBy(z / this.zoom) // zoom to z
-    const zoomed = this.zoom / zf
+  // starting with point p in view v, zoom by f and pan so p -> q
+  // prettier-ignore
+  private manipView = (view: ViewState, p: Point2, factor: number, qx: number, qy: number) => {
+    this.zoomBy((factor * view.zoom) / this.zoom) // zoom to z
+    const zoomed = this.zoom / view.zoom
     this.setTranslate(
-      transx + toX - (dx * zoomed + nmx),
-      transy + toY - (dy * zoomed + nmy)
+      view.trans.x + qx - ((p.x - view.nodeMid.x) * zoomed + view.nodeMid.x),
+      view.trans.y + qy - ((p.y - view.nodeMid.y) * zoomed + view.nodeMid.y)
     )
-    console.log(nmx + toX + (dx * zoomed + nmx));
-    
   }
 
   private resetView = () => {
@@ -337,4 +304,11 @@ export default class PanZoomController {
 
   private viewSame = (a: Point2, b: Point2, c: number, d: number) =>
     fequals(c, d, 1000) && a.equals(b, 100000)
+
+  // snapshot view state
+  private saveView = (): ViewState => ({
+    zoom: this.zoom,
+    trans: this.trans.clone(),
+    nodeMid: this.nodeMid.clone(),
+  })
 }

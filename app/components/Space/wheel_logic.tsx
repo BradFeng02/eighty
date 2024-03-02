@@ -1,20 +1,12 @@
 import { Point2, clamp } from '@/app/utils'
-import { Ease } from './pan_zoom_utils'
-
-type PanFunction = (dx: number, dy: number) => void
-type ZoomToFunction = (factor: number, originX: number, originY: number) => void
-type SetEaseFunction = (e: Ease) => void
+import { Ease, Fn } from './pan_zoom_utils'
 
 export default class WheelLogic {
-  private pan: PanFunction
-  private zoomTo: ZoomToFunction
-  private setEase: SetEaseFunction
+  private pan: Fn.Pan
+  private zoomTo: Fn.ZoomTo
+  private setEase: Fn.SetEase
 
-  constructor(
-    pan: PanFunction,
-    zoomTo: ZoomToFunction,
-    setEase: SetEaseFunction
-  ) {
+  constructor(pan: Fn.Pan, zoomTo: Fn.ZoomTo, setEase: Fn.SetEase) {
     this.pan = pan
     this.zoomTo = zoomTo
     this.setEase = setEase

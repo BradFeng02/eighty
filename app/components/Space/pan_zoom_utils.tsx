@@ -1,5 +1,17 @@
 import { Point2, clamp } from '@/app/utils'
 
+export type ViewState = {
+  zoom: number
+  trans: Point2
+  nodeMid: Point2
+}
+
+export const dummyViewState = () => ({
+  zoom: 0,
+  trans: new Point2(0, 0),
+  nodeMid: new Point2(0, 0),
+})
+
 export const PADDING = 10
 export const TAP_DEADZONE = 10
 export const DOUBLE_TAP_DEADZONE = 30
@@ -59,3 +71,28 @@ const dynamicEaseOut = (
 const quadEaseOut = (t: number) => 1 - (1 - clamp(t, 0, 1)) ** 2
 
 const quinticEaseOut = (t: number) => 1 - (1 - clamp(t, 0, 1)) ** 5
+
+///// function type defs
+
+export namespace Fn {
+  export type GetTrans = () => Point2
+  export type SaveView = () => ViewState
+  export type SetTranslate = (tx: number, ty: number) => void
+  export type ManipView = (
+    view: ViewState,
+    p: Point2,
+    factor: number,
+    qx: number,
+    qy: number
+  ) => void
+  export type SetEase = (e: Ease) => void
+  export type Animate = () => void
+  export type ViewIsReset = () => boolean
+  export type SetViewIsReset = (val: boolean) => void
+  export type Pan = (dx: number, dy: number) => void
+  export type ZoomTo = (
+    factor: number,
+    originX: number,
+    originY: number
+  ) => void
+}
