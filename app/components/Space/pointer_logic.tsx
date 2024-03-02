@@ -28,6 +28,7 @@ export default class PointerLogic {
   private from = new Point2(0, 0) // initial node translate
   private wasReset = true // was view reset (for cancel)
   private isTap = true
+  private cancelable = true
 
   readonly pointerDown = (e: PointerEvent) => {
     if (this.currentAction !== null) return
@@ -39,6 +40,7 @@ export default class PointerLogic {
         this.from.setTo(this.getTrans())
         this.wasReset = this.viewIsReset()
         this.isTap = true
+        this.cancelable = true
         this.setEase(Ease.Fast)
         break
     }
@@ -145,8 +147,12 @@ export default class PointerLogic {
   }
 
   private touchManipStop = (e: PointerEvent) => {
-    console.log(e.type)
-
+    if (this.cancelable && e.type === 'pointercancel') {
+      this.setEase(Ease.None)
+      this.setTranslate(this.from.x, this.from.y)
+      if (this.wasReset) this.setViewIsReset(true)
+      this.animate()
+    }
     // drop second finger
     if (e.pointerId === this.touch2) {
       this.touch2 = null
@@ -173,6 +179,7 @@ export default class PointerLogic {
       this.touch1 = e.pointerId
       this.touchPos1.set(e.clientX, e.clientY)
     } else if (this.touch2 === null && e.pointerId !== this.touch1) {
+      this.cancelable = false // if two fingers, can't cancel
       // second finger
       this.touch2 = e.pointerId
       this.touchPos2.set(e.clientX, e.clientY)
@@ -219,7 +226,7 @@ export default class PointerLogic {
 
 ///// utils
 
-const TAP_DEADZONE = 20
+const TAP_DEADZONE = 21
 
 type PointerEventHandler = (e: PointerEvent) => void
 type PointerStopHandler = (e: PointerEvent) => boolean // true to end action
