@@ -20,6 +20,11 @@ export class Point2 {
     this.y = y
   }
 
+  setTo = (point2: Point2) => {
+    this.x = point2.x
+    this.y = point2.y
+  }
+
   equals = (point2: Point2, ek?: number) => {
     return fequals(this.x, point2.x, ek) && fequals(this.y, point2.y, ek)
   }
@@ -44,3 +49,9 @@ export const clamp = (n: number, min: number, max: number) =>
 // ek approx. max magnitude of a and b
 export const fequals = (a: number, b: number, ek: number = 1) =>
   Math.abs(a - b) < Number.EPSILON * ek
+
+export const dist = (x1: number, y1: number, x2: number, y2: number) =>
+  Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+
+export const p2dist = (a: Point2, b: Point2) =>
+  Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2)

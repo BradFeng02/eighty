@@ -52,10 +52,16 @@ export default class PanZoomController {
 
     this.wheelLogic = new WheelLogic(this.pan, this.zoomTo, this.setEase)
     this.pointerLogic = new PointerLogic(
-      this.translateTo,
-      this.zoomTo,
+      () => this.trans,
+      () => this.zoom,
+      this.setTranslate,
+      this.setZoomTo,
+      this.manipView,
       this.setEase,
-      this.animate
+      this.animate,
+      this.viewIsReset,
+      this.setViewIsReset,
+      () => this.nodeMid
     )
     this.registerListeners()
     this.resizeObserver.observe(this.space)
@@ -140,17 +146,14 @@ export default class PanZoomController {
 
   private wheelHandler = (e: WheelEvent) => {
     this.update()
-    if (this.wheelLogic.wheel(e)) {
-      this.setViewIsReset(false)
-      this.animate()
-    }
+    if (this.wheelLogic.wheel(e)) this.animate()
     e.stopPropagation()
     e.preventDefault()
   }
 
   private pointerDownHandler = (e: PointerEvent) => {
     this.update()
-    this.pointerLogic.pointerDown(e, this.trans)
+    this.pointerLogic.pointerDown(e)
   }
 
   /*****
@@ -185,9 +188,9 @@ export default class PanZoomController {
     // restart easing with new end values
     this.easeStartTime = time
     this._zoom = this.$zoom // start at where animation left off
-    this._trans.set(this.$trans.x, this.$trans.y) // start at where animation left off
+    this._trans.setTo(this.$trans) // start at where animation left off
     this.oldZoom = this.zoom
-    this.oldTrans.set(this.trans.x, this.trans.y)
+    this.oldTrans.setTo(this.trans)
   }
 
   private animate = () => {
@@ -238,7 +241,7 @@ export default class PanZoomController {
   }
 
   private animateInstant = () => {
-    this.$trans.set(this.trans.x, this.trans.y)
+    this.$trans.setTo(this.trans)
     this.$zoom = this.zoom
     this.node.style.translate = `${this.$trans.x}px ${this.$trans.y}px`
     this.node.style.scale = (this.$zoom * this.scale).toString()
@@ -249,6 +252,7 @@ export default class PanZoomController {
    *****/
 
   private pan = (dx: number, dy: number) => {
+    if (!dx && !dy) return
     const nodeHalfScaledX = this.nodeHalf.x * this.scale * this.zoom
     const nodeHalfScaledY = this.nodeHalf.y * this.scale * this.zoom
     const bx = Math.max(
@@ -263,15 +267,22 @@ export default class PanZoomController {
     const clampdy = clamp(this.trans.y + dy, -by, by) - this.trans.y
     this.trans.move(clampdx, clampdy)
     this.nodeMid.move(clampdx, clampdy)
+    this.setViewIsReset(false)
   }
 
   private zoomBy = (factor: number) => {
+    if (factor === 1) return
     this.zoom = clamp(this.zoom * factor, this.min_zoom, this.max_zoom)
+    this.setViewIsReset(false)
   }
 
   // function to pan to given trans
-  private translateTo = (tx: number, ty: number) => {
+  private setTranslate = (tx: number, ty: number) => {
     this.pan(tx - this.trans.x, ty - this.trans.y)
+  }
+
+  private setZoomTo = (z: number, originX: number, originY: number) => {
+    this.zoomTo(z / this.zoom, originX, originY)
   }
 
   private zoomTo = (factor: number, originX: number, originY: number) => {
@@ -284,17 +295,44 @@ export default class PanZoomController {
     this.pan(dx, dy)
   }
 
+  // point from at zoom zf -> point to at zoom z
+  private manipView = (
+    zf: number,
+    z: number,
+    fromX: number,
+    fromY: number,
+    toX: number,
+    toY: number,
+    nmx: number,
+    nmy: number,
+    transx: number,
+    transy: number
+  ) => {
+    const dx = fromX - nmx
+    const dy = fromY - nmy
+    this.zoomBy(z / this.zoom) // zoom to z
+    const zoomed = this.zoom / zf
+    this.setTranslate(
+      transx + toX - (dx * zoomed + nmx),
+      transy + toY - (dy * zoomed + nmy)
+    )
+    console.log(nmx + toX + (dx * zoomed + nmx));
+    
+  }
+
   private resetView = () => {
     this.setViewIsReset(true)
     this.zoomBy(1 / this.zoom)
-    this.translateTo(0, 0)
+    this.setTranslate(0, 0)
   }
 
   private _viewIsReset = true
   private viewIsReset = () => this._viewIsReset
   setViewIsReset = (val: boolean) => {
-    this._viewIsReset = val
-    this.onViewIsResetChange(val)
+    if (val !== this._viewIsReset) {
+      this._viewIsReset = val
+      this.onViewIsResetChange(val)
+    }
   }
 
   private viewSame = (a: Point2, b: Point2, c: number, d: number) =>
