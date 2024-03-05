@@ -25,7 +25,10 @@ const SpaceWrapper = ({ wid, hgt, children }: Props) => {
   }, [])
 
   return (
-    <div className="h-full w-full touch-none overflow-clip" ref={container}>
+    <div
+      className="h-full w-full touch-none select-none overflow-clip"
+      ref={container}
+    >
       <div
         className="relative touch-none overflow-visible"
         style={{

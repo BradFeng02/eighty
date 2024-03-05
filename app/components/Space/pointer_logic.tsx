@@ -1,10 +1,18 @@
-import { Point2, p2dist } from '@/app/utils'
-import { Ease, ViewState, dummyViewState, Fn } from './pan_zoom_utils'
+import { Point2, Dbt, dist, p2dist } from '@/app/utils'
+import {
+  Ease,
+  ViewState,
+  dummyViewState,
+  Fn,
+  PointerEvDetails,
+} from './pan_zoom_utils'
 
 export default class PointerLogic {
   private getTrans: Fn.GetTrans
   private saveView: Fn.SaveView
   private setTranslate: Fn.SetTranslate
+  private zoomIn: Fn.ZoomIn
+  private resetView: Fn.ResetView
   private manipView: Fn.ManipView
   private setEase: Fn.SetEase
   private animate: Fn.Animate
@@ -12,10 +20,12 @@ export default class PointerLogic {
   private setViewIsReset: Fn.SetViewIsReset
 
   // prettier-ignore
-  constructor( getTrans: Fn.GetTrans, saveView: Fn.SaveView, setTranslate: Fn.SetTranslate, manipView: Fn.ManipView, setEase: Fn.SetEase, animate: Fn.Animate, viewIsReset: Fn.ViewIsReset, setViewIsReset: Fn.SetViewIsReset) {
+  constructor( getTrans: Fn.GetTrans, saveView: Fn.SaveView, setTranslate: Fn.SetTranslate, zoomIn: Fn.ZoomIn, resetView: Fn.ResetView, manipView: Fn.ManipView, setEase: Fn.SetEase, animate: Fn.Animate, viewIsReset: Fn.ViewIsReset, setViewIsReset: Fn.SetViewIsReset) {
     this.getTrans = getTrans
     this.saveView = saveView
     this.setTranslate = setTranslate
+    this.zoomIn = zoomIn
+    this.resetView = resetView
     this.manipView = manipView
     this.setEase = setEase
     this.animate = animate
@@ -33,8 +43,14 @@ export default class PointerLogic {
   private start = new Point2(0, 0) // pointer down event client coords
   private from = new Point2(0, 0) // initial node translate
   private wasReset = true // was view reset (for cancel)
-  private isTap = true
+  private _isTap = true
   private cancelable = true
+
+  private isTap = () => this._isTap
+  private setIsTap = (val: boolean) => {
+    this._isTap = val
+    if (!val) this.cancelDoubleTap() // cancel double tap if move
+  }
 
   readonly pointerDown = (e: PointerEvent) => {
     if (this.currentAction !== null) return
@@ -42,10 +58,17 @@ export default class PointerLogic {
     switch (e.pointerType) {
       case 'pen':
       case 'touch':
+        if (this.shouldDoubleTap(e)) {
+          if (this.viewIsReset()) this.zoomIn(e.clientX, e.clientY)
+          else this.resetView()
+          this.animate()
+          return
+        }
+
         this.start.set(e.clientX, e.clientY)
         this.from.setTo(this.getTrans())
         this.wasReset = this.viewIsReset()
-        this.isTap = true
+        this.setIsTap(true)
         this.cancelable = true
         this.setEase(Ease.Fast)
         break
@@ -74,6 +97,61 @@ export default class PointerLogic {
     }
   }
 
+  ///// DOUBLE TAP
+
+  private lastTap: PointerEvDetails | null = null
+
+  // prettier-ignore
+  private shouldDoubleTap = (e: PointerEvent): boolean => {
+    // second tap, fast enough, same type, close enough
+    const couldBeDbt = this.lastTap && e.timeStamp - this.lastTap.time < DBL_TAP_WINDOW && e.pointerType === this.lastTap.type && dist(e.clientX, e.clientY, this.lastTap.clientX, this.lastTap.clientY) < TAP_DEADZONE * 2
+    //// NOT DOUBLE TAP
+    if (this.lastTap === null || !couldBeDbt) return this._dbtHelper(e, true, false) // not valid: save and don't double tap
+    const tgtDbt = this.targetDbt(e.target)
+    //// DISABLED
+    if (tgtDbt === Dbt.Disable) return this._dbtHelper(e, false, false) // disable: reset and don't double tap
+    //// TOGGLE
+    else if (tgtDbt === Dbt.Toggle || this.targetDbt(this.lastTap.target) === Dbt.Toggle) {
+      if (e.target === this.lastTap.target) return this._dbtHelper(e, false, true) // same target: reset and double tap
+      else return this._dbtHelper(e, true, false) // different target: save and don't double tap
+    }
+    //// NORMAL
+    else return this._dbtHelper(e, false, true) // normal: reset and double tap
+  }
+
+  private _dbtHelper = (e: PointerEvent, save: boolean, res: boolean) => {
+    if (save) this.saveTap(e)
+    else this.lastTap = null
+    return res
+  }
+
+  private targetDbt = (tgt: EventTarget | null): Dbt => {
+    if (tgt instanceof HTMLElement) {
+      if (tgt.classList.contains(Dbt.Disable)) return Dbt.Disable
+      if (tgt.classList.contains(Dbt.Toggle)) return Dbt.Toggle
+      return Dbt.Normal
+    }
+    return Dbt.Disable
+  }
+
+  private saveTap = (e: PointerEvent) => {
+    if (this.targetDbt(e.target) === Dbt.Disable) {
+      this.lastTap = null
+      return
+    }
+    this.lastTap = {
+      time: e.timeStamp,
+      type: e.pointerType,
+      clientX: e.clientX,
+      clientY: e.clientY,
+      target: e.target,
+    }
+  }
+
+  private cancelDoubleTap = () => {
+    this.lastTap = null
+  }
+
   ///// PEN DRAG
 
   private penDrag = (e: PointerEvent) => {
@@ -87,18 +165,17 @@ export default class PointerLogic {
       if (this.wasReset) this.setViewIsReset(true)
       this.animate()
     }
-    console.log(e.type)
     return true
   }
 
   // drag (also used in 1 finger touch)
   private dragHelper = (e: PointerEvent) => {
-    if (this.isTap) {
-      if (!this.inDeadzone(e.clientX, e.clientY)) this.isTap = false
+    if (this.isTap()) {
+      if (!this.inDeadzone(e.clientX, e.clientY)) this.setIsTap(false)
     } else {
       this.setEase(Ease.Least) // allows first move to catch up smoothly
     }
-    if (!this.isTap) {
+    if (!this.isTap()) {
       this.setTranslate(
         this.from.x + e.clientX - this.start.x,
         this.from.y + e.clientY - this.start.y
@@ -185,7 +262,9 @@ export default class PointerLogic {
       this.touch1 = e.pointerId
       this.touchPos1.set(e.clientX, e.clientY)
     } else if (this.touch2 === null && e.pointerId !== this.touch1) {
+      // fires first time two fingers
       this.cancelable = false // if two fingers, can't cancel
+      this.setIsTap(false) // also not tap anymore
       // second finger
       this.touch2 = e.pointerId
       this.touchPos2.set(e.clientX, e.clientY)
@@ -233,6 +312,7 @@ export default class PointerLogic {
 ///// utils
 
 const TAP_DEADZONE = 21
+const DBL_TAP_WINDOW = 400
 
 type PointerEventHandler = (e: PointerEvent) => void
 type PointerStopHandler = (e: PointerEvent) => boolean // true to end action

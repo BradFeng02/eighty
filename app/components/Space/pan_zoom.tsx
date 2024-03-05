@@ -51,7 +51,8 @@ export default class PanZoomController {
     this.resize()
 
     // prettier-ignore
-    this.pointerLogic = new PointerLogic(() => this.trans, this.saveView, this.setTranslate, this.manipView, this.setEase, this.animate, this.viewIsReset, this.setViewIsReset)
+    // interruptEaseWrapper: because logic should always interrupt
+    this.pointerLogic = new PointerLogic(this.interruptEaseWrapper(() => this.trans), this.interruptEaseWrapper(this.saveView), this.setTranslate, this.zoomIn, this.resetView, this.manipView, this.setEase, this.animate, this.viewIsReset, this.setViewIsReset)
     this.wheelLogic = new WheelLogic(this.pan, this.zoomTo, this.setEase)
     this.registerListeners()
     this.resizeObserver.observe(this.space)
@@ -137,6 +138,7 @@ export default class PanZoomController {
   }
 
   private wheelHandler = (e: WheelEvent) => {
+    this.interruptEase()
     this.update()
     if (this.wheelLogic.wheel(e)) this.animate()
     e.stopPropagation()
@@ -144,6 +146,7 @@ export default class PanZoomController {
   }
 
   private pointerDownHandler = (e: PointerEvent) => {
+    this.interruptEase()
     this.update()
     this.pointerLogic.pointerDown(e)
   }
@@ -159,12 +162,29 @@ export default class PanZoomController {
   private oldZoom = 1 // store previous values
   private oldTrans = new Point2(0, 0)
 
-  private animationRequestID = 0 // non-zero
+  private animationRequestID = 0 // non-zero during animation
   private easeStartTime = 0
   private _ease: Ease = Ease.Smooth
+  private _easeInterruptable = false
+
+  // interrupt ease, start from midway state
+  // if interrupting, MUST call before accessing state (eg. setTranslate)
+  private interruptEase = () => {
+    if (this._easeInterruptable && this.animationRequestID) {
+      this._easeInterruptable = false
+      this.zoomBy(this.$zoom / this.zoom)
+      this.setTranslate(this.$trans.x, this.$trans.y)
+      this._zoom = this.$zoom
+      this._trans.setTo(this.$trans)
+      this.oldZoom = this.$zoom
+      this.oldTrans.setTo(this.$trans)
+    }
+  }
 
   private setEase = (e: Ease) => {
     if (e !== this._ease) {
+      if (this._ease === Ease.Slow) this.interruptEase()
+      this._easeInterruptable = e === Ease.Slow // only slow ease interruptable
       this.restartEase()
       this._ease = e
     }
@@ -181,8 +201,6 @@ export default class PanZoomController {
     this.easeStartTime = time
     this._zoom = this.$zoom // start at where animation left off
     this._trans.setTo(this.$trans) // start at where animation left off
-    this.oldZoom = this.zoom
-    this.oldTrans.setTo(this.trans)
   }
 
   private animate = () => {
@@ -191,6 +209,8 @@ export default class PanZoomController {
       return
     // if something changed...
     this.restartEase()
+    this.oldZoom = this.zoom
+    this.oldTrans.setTo(this.trans)
     // start animation if not running
     if (!this.animationRequestID)
       this.animationRequestID = requestAnimationFrame(this._frame)
@@ -228,6 +248,7 @@ export default class PanZoomController {
   }
 
   private animateInstant = () => {
+    if (this.animationRequestID) return // don't interrupt running animation
     this.$trans.setTo(this.trans)
     this.$zoom = this.zoom
     this.node.style.translate = `${this.$trans.x}px ${this.$trans.y}px`
@@ -238,8 +259,10 @@ export default class PanZoomController {
    *****    UTILS
    *****/
 
+  //// basic movement (MUST run when trans changes)
   private pan = (dx: number, dy: number) => {
     if (!dx && !dy) return
+    this.interruptEase()
     const nodeHalfScaledX = this.nodeHalf.x * this.scale * this.zoom
     const nodeHalfScaledY = this.nodeHalf.y * this.scale * this.zoom
     const bx = Math.max(
@@ -257,18 +280,21 @@ export default class PanZoomController {
     this.setViewIsReset(false)
   }
 
+  //// basic movement (MUST run when zoom changes)
   private zoomBy = (factor: number) => {
     if (factor === 1) return
+    this.interruptEase()
     this.zoom = clamp(this.zoom * factor, this.min_zoom, this.max_zoom)
     this.setViewIsReset(false)
   }
 
-  // function to pan to given trans
   private setTranslate = (tx: number, ty: number) => {
+    this.interruptEase()
     this.pan(tx - this.trans.x, ty - this.trans.y)
   }
 
   private zoomTo = (factor: number, originX: number, originY: number) => {
+    this.interruptEase()
     const startZoom = this.zoom
     this.zoomBy(factor)
     const zoomed = this.zoom / startZoom // may be clamped
@@ -281,6 +307,7 @@ export default class PanZoomController {
   // starting with point p in view v, zoom by f and pan so p -> q
   // prettier-ignore
   private manipView = (view: ViewState, p: Point2, factor: number, qx: number, qy: number) => {
+    this.interruptEase()
     this.zoomBy((factor * view.zoom) / this.zoom) // zoom to z
     const zoomed = this.zoom / view.zoom
     this.setTranslate(
@@ -289,10 +316,19 @@ export default class PanZoomController {
     )
   }
 
+  private zoomIn = (originX: number, originY: number) => {
+    this.interruptEase()
+    this.zoomTo(this.target_zoom / this.zoom, originX, originY)
+    this.pan(this.spaceMid.x - originX, this.spaceMid.y - originY)
+    this.setEase(Ease.Slow)
+  }
+
   private resetView = () => {
-    this.setViewIsReset(true)
+    this.interruptEase()
     this.zoomBy(1 / this.zoom)
     this.setTranslate(0, 0)
+    this.setViewIsReset(true)
+    this.setEase(Ease.Slow)
   }
 
   private _viewIsReset = true
@@ -313,4 +349,12 @@ export default class PanZoomController {
     trans: this.trans.clone(),
     nodeMid: this.nodeMid.clone(),
   })
+
+  // call interruptEase before f
+  private interruptEaseWrapper =
+    <A extends ReadonlyArray<unknown>, R>(f: (...params: A) => R) =>
+    (...args: A): R => {
+      this.interruptEase()
+      return f(...args)
+    }
 }

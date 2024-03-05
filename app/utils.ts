@@ -1,5 +1,12 @@
-import { log } from 'console'
 import { Atkinson_Hyperlegible } from 'next/font/google'
+
+// dbt-toggle: must double tap same target (eg. checkbox)
+// dbt-disable: don't double tap (eg. counter button)
+export enum Dbt {
+  Disable = 'dbt-disable',
+  Toggle = 'dbt-toggle',
+  Normal = '',
+}
 
 export class Point2 {
   x: number

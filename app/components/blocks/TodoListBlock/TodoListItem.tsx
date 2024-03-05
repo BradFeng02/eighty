@@ -1,13 +1,7 @@
 'use client'
 
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin'
-import { HeadingNode } from '@lexical/rich-text'
-import {
-  $getSelection,
-  EditorThemeClasses,
-  EditorState,
-  BLUR_COMMAND,
-} from 'lexical'
+import { EditorThemeClasses, EditorState, BLUR_COMMAND } from 'lexical'
 import { eightyTask } from '@/app/datatypes'
 import { useRef, useState } from 'react'
 import RichLexical, {
@@ -15,6 +9,7 @@ import RichLexical, {
   CustomInitializeState,
   $editorIsEmpty,
 } from '../../RichLexical/RichLexical'
+import { Dbt } from '@/app/utils'
 
 type Props = {
   task: eightyTask
@@ -65,7 +60,7 @@ const TodoListItem = ({ task }: Props) => {
       <div className="flex items-center gap-[5px]">
         <div className="w-[18px] min-w-[18px]">
           <input
-            className="align-middle"
+            className={`${Dbt.Toggle} align-middle`}
             type="checkbox"
             checked={checked}
             onChange={() => {
