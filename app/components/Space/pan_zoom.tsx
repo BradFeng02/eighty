@@ -61,6 +61,8 @@ export default class PanZoomController {
   }
 
   readonly destroy = () => {
+    this.pointerLogic.destroy()
+    this.wheelLogic.destroy()
     this.stopAnimation()
     this.resizeObserver.disconnect()
     this.removeListeners()

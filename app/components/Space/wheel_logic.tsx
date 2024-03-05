@@ -12,6 +12,10 @@ export default class WheelLogic {
     this.setEase = setEase
   }
 
+  readonly destroy = () => {
+    // nothing
+  }
+
   private lastWheelTime: number = -1000
   private lastMag = new Point2(-1, -1)
   private wheelMagX = 0.11111111111

@@ -23,6 +23,12 @@ export default class PointerLogic {
     this.setViewIsReset = setViewIsReset
   }
 
+  readonly destroy = () => {
+    if (this.currentAction) {
+      this.stopAction()
+    }
+  }
+
   private currentAction: PointerAction | null = null
   private start = new Point2(0, 0) // pointer down event client coords
   private from = new Point2(0, 0) // initial node translate
