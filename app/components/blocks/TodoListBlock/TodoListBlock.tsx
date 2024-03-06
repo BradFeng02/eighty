@@ -3,16 +3,10 @@
 import { useState } from 'react'
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin'
 import { $createHeadingNode, HeadingNode } from '@lexical/rich-text'
-import {
-  $getRoot,
-  $selectAll,
-  EditorThemeClasses,
-  ParagraphNode,
-} from 'lexical'
+import { EditorThemeClasses } from 'lexical'
 import BlockWrapper from '../BlockWrapper'
 import TodoList from './TodoList'
 import RichLexical, {
-  CustomInitializeState,
   InitialConfigReduced,
 } from '../../RichLexical/RichLexical'
 
@@ -38,22 +32,11 @@ const initConfig: InitialConfigReduced = {
   theme: titleTheme,
   nodes: [HeadingNode],
 }
+const $defaultNode = () => $createHeadingNode('h2')
 
 const TodoListBlock = (props: Props) => {
   const [showTitle, setShowTitle] = useState(true)
   const [titleFontSize, setTitleFontSize] = useState(16)
-
-  const initState: CustomInitializeState = (editor, register) => {
-    const heading = $createHeadingNode('h2')
-    $getRoot().append(heading)
-    $selectAll()
-
-    // no delete h2
-    editor.registerNodeTransform(ParagraphNode, (node) => {
-      const heading = $createHeadingNode('h2')
-      node.replace(heading)
-    })
-  }
 
   return (
     <BlockWrapper {...props}>
@@ -62,7 +45,7 @@ const TodoListBlock = (props: Props) => {
           <RichLexical
             namespace="TodoListBlock"
             initConfig={initConfig}
-            customInitState={initState}
+            $defaultNodeType={$defaultNode}
             fontSize={titleFontSize + 'px'}
             placeholder="Title"
             singleLine

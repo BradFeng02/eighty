@@ -22,7 +22,7 @@ const BlockWrapper = ({ wid, hgt, left, top, children }: Props) => {
 
   return (
     <div
-      className="pointer-events-auto absolute overflow-hidden"
+      className="pointer-events-auto absolute select-text overflow-hidden"
       style={{
         width: wid * GRID_SIZE_PX,
         height: hgt * GRID_SIZE_PX,

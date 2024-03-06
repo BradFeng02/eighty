@@ -5,7 +5,12 @@ const testpage = () => {
   return (
     <>
       <main
-        className={`${styles['test-container']} overflow-auto border-8 border-solid border-black`}
+        style={{
+          position: 'absolute',
+          top: '100px',
+          left: '100px',
+        }}
+        className={`${styles['test-container']} resize overflow-auto border-8 border-solid border-black`}
       >
         <Space></Space>
       </main>
