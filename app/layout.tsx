@@ -21,7 +21,7 @@ export default function RootLayout({
         <h1>scrollt est</h1>
         <h1>scrollt est</h1>
 
-        <div className="h-screen w-screen ml-12">{children}</div>
+        <div className="ml-12 h-screen w-screen">{children}</div>
       </body>
     </html>
   )
