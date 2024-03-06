@@ -183,7 +183,7 @@ export default class PanZoomController {
 
   private setEase = (e: Ease) => {
     if (e !== this._ease) {
-      if (this._ease === Ease.Slow) this.interruptEase()
+      if (this._easeInterruptable) this.interruptEase()
       this._easeInterruptable = e === Ease.Slow // only slow ease interruptable
       this.restartEase()
       this._ease = e
