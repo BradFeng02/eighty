@@ -20,7 +20,7 @@ export type PointerEvDetails = {
   target: EventTarget | null
 }
 
-export const PADDING = 10
+export const PADDING = 10 // padding for node in space
 
 ///// animation easing
 

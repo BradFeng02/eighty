@@ -16,8 +16,3 @@ body {
   /* touch-action: pan-x pan-y; */
   /* touch-action: none; */
 }
-
-body.nodrag {
-  pointer-events: none;
-  user-select: none;
-}
