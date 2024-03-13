@@ -159,12 +159,7 @@ export default class PointerLogic {
   }
 
   private penDragStop = (e: PointerEvent) => {
-    if (e.type === 'pointercancel') {
-      this.setEase(Ease.None)
-      this.setTranslate(this.from.x, this.from.y)
-      if (this.wasReset) this.setViewIsReset(true)
-      this.animate()
-    }
+    if (e.type === 'pointercancel') this.cancelMove()
     return true
   }
 
@@ -230,12 +225,7 @@ export default class PointerLogic {
   }
 
   private touchManipStop = (e: PointerEvent) => {
-    if (this.cancelable && e.type === 'pointercancel') {
-      this.setEase(Ease.None)
-      this.setTranslate(this.from.x, this.from.y)
-      if (this.wasReset) this.setViewIsReset(true)
-      this.animate()
-    }
+    if (this.cancelable && e.type === 'pointercancel') this.cancelMove()
     // drop second finger
     if (e.pointerId === this.touch2) {
       this.touch2 = null
@@ -284,6 +274,14 @@ export default class PointerLogic {
   }
 
   ///// utils
+
+  private cancelMove = () => {
+    this.cancelDoubleTap()
+    this.setEase(Ease.None)
+    this.setTranslate(this.from.x, this.from.y)
+    if (this.wasReset) this.setViewIsReset(true)
+    this.animate()
+  }
 
   private inDeadzone(x: number, y: number) {
     const dx = this.start.x - x
