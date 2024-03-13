@@ -10,6 +10,8 @@
 
 body {
   font-family: var(--sys-font);
+  touch-action: none;
+  overflow: hidden;
 }
 
 * {

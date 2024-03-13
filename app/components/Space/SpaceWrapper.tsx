@@ -22,7 +22,7 @@ const SpaceWrapper = ({ wid, hgt, children }: Props) => {
     return () => {
       controller.destroy()
     }
-  }, [])
+  }, [container, wrapper])
 
   return (
     <div
