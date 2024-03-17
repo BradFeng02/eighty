@@ -13,8 +13,3 @@ body {
   touch-action: none;
   overflow: hidden;
 }
-
-* {
-  /* touch-action: pan-x pan-y; */
-  /* touch-action: none; */
-}

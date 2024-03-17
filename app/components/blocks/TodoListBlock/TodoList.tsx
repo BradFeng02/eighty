@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin'
 import { EditorRefPlugin } from '@lexical/react/LexicalEditorRefPlugin'
 import {
@@ -19,6 +19,7 @@ import RichLexical, {
   CustomInitializeState,
   InitialConfigReduced,
 } from '../../RichLexical/RichLexical'
+import ScrollableDiv from '../../Space/ScrollableDiv'
 
 const theme: EditorThemeClasses = {
   paragraph: 'h-min',
@@ -76,7 +77,13 @@ const TodoList = () => {
   }
 
   return (
-    <div className="flex-grow touch-pan-y overflow-auto border-t-2 border-white pt-[5px]">
+    <ScrollableDiv
+      className="flex-grow border-t-2 border-white pt-[5px]"
+      scrollableY={tasks.length > 5}
+      ref={(r) => {
+        console.log(r)
+      }}
+    >
       <ol>
         {tasks.map((t, i) => (
           <TodoListItem task={t} key={i} />
@@ -111,7 +118,7 @@ const TodoList = () => {
           <EditorRefPlugin editorRef={editorRef} />
         </RichLexical>
       </div>
-    </div>
+    </ScrollableDiv>
   )
 }
 
