@@ -33,6 +33,9 @@ const theme: EditorThemeClasses = {
 const initConfig: InitialConfigReduced = { theme }
 
 const TodoList = () => {
+  const listRef = useRef<HTMLOListElement>(null)
+  const inputRef = useRef<HTMLDivElement>(null)
+  const [scrollable, setScrollable] = useState(false)
   const editorRef = useRef<LexicalEditor>(null)
   const insertFontSize = 16
   const [empty, setEmpty] = useState(true)
@@ -76,20 +79,32 @@ const TodoList = () => {
     }
   }
 
+  useEffect(() => {
+    if (listRef.current && inputRef.current && listRef.current.parentElement) {
+      const parent = listRef.current.parentElement
+      const resizeObserver = new ResizeObserver(() => {
+        setScrollable(parent.scrollHeight > parent.clientHeight)
+      })
+      resizeObserver.observe(listRef.current)
+      resizeObserver.observe(inputRef.current)
+
+      return () => {
+        resizeObserver.disconnect()
+      }
+    }
+  }, [listRef, inputRef])
+
   return (
     <ScrollableDiv
       className="flex-grow border-t-2 border-white pt-[5px]"
-      scrollableY={tasks.length > 5}
-      ref={(r) => {
-        console.log(r)
-      }}
+      scrollableY={scrollable}
     >
-      <ol>
+      <ol ref={listRef}>
         {tasks.map((t, i) => (
           <TodoListItem task={t} key={i} />
         ))}
       </ol>
-      <div className="flex items-center gap-[5px]">
+      <div className="flex items-center gap-[5px]" ref={inputRef}>
         <div
           className="w-[18px] min-w-[18px] select-none"
           style={{ opacity: empty ? 0.35 : 1 }}

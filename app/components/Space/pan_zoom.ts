@@ -3,16 +3,17 @@ import { RefObject } from 'react'
 import { Ease, PADDING, ViewState, easeValue } from './pan_zoom_utils'
 import WheelLogic from './wheel_logic'
 import PointerLogic from './pointer_logic'
+import { WheelContextObject } from './WheelContext'
 
 export default class PanZoomController {
   private readonly space: HTMLDivElement
   private readonly node: HTMLDivElement
-  private restoreStyle: string
+  private readonly restoreStyle: string
 
-  private wheelLogic: WheelLogic
-  private pointerLogic: PointerLogic
+  private readonly wheelLogic: WheelLogic
+  private readonly pointerLogic: PointerLogic
 
-  private onViewIsResetChange: (val: boolean) => void
+  private readonly onViewIsResetChange: (val: boolean) => void
 
   private scale = 1 // set in resize
   private min_zoom = 0.5
@@ -28,12 +29,13 @@ export default class PanZoomController {
   private nodeHalf: Point2
 
   /*****
-   *****    CONTRUCTOR AND DETSTRUCTOR
+   *****    CONTRUCTOR AND DESTRUCTOR
    *****/
 
   constructor(
     container: RefObject<HTMLDivElement>,
     wrapper: RefObject<HTMLDivElement>,
+    wheelContext: WheelContextObject,
     onViewIsResetChange: (val: boolean) => void
   ) {
     this.onViewIsResetChange = onViewIsResetChange
@@ -51,9 +53,11 @@ export default class PanZoomController {
     this.resize()
 
     // prettier-ignore
-    // interruptEaseWrapper: because logic should always interrupt
-    this.pointerLogic = new PointerLogic(this.interruptEaseWrapper(() => this.trans), this.interruptEaseWrapper(this.saveView), this.setTranslate, this.zoomIn, this.resetView, this.manipView, this.setEase, this.animate, this.viewIsReset, this.setViewIsReset)
-    this.wheelLogic = new WheelLogic(this.pan, this.zoomTo, this.setEase)
+    {
+      // interruptEaseWrapper: because logic should always interrupt
+      this.pointerLogic = new PointerLogic(this.interruptEaseWrapper(() => this.trans), this.interruptEaseWrapper(this.saveView), this.setTranslate, this.zoomIn, this.resetView, this.manipView, this.setEase, this.animate, this.viewIsReset, this.setViewIsReset)
+      this.wheelLogic = new WheelLogic(wheelContext, this.pan, this.zoomTo, this.setEase)
+    }
     this.registerListeners()
     this.resizeObserver.observe(this.space)
 

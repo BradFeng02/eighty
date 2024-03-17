@@ -1,4 +1,5 @@
-import { ReactNode, RefObject, forwardRef } from 'react'
+import { ReactNode, useContext } from 'react'
+import { WheelTarget, WheelContext } from './WheelContext'
 
 type Props = {
   children: ReactNode
@@ -7,13 +8,25 @@ type Props = {
   scrollableY?: boolean
 }
 
-const ScrollableDiv = forwardRef<HTMLDivElement, Props>(function ScrollableDiv(
-  { children, className, scrollableX, scrollableY }: Props,
-  ref
-) {
+const ScrollableDiv = ({
+  children,
+  className,
+  scrollableX,
+  scrollableY,
+}: Props) => {
+  const wheelContext = useContext(WheelContext)
+
   const onWheelCapture = (e: React.WheelEvent) => {
-    if (scrollableY && !e.ctrlKey && !e.deltaX) e.stopPropagation()
-    else if (scrollableX && !e.ctrlKey && !e.deltaY) e.stopPropagation()
+    if (
+      wheelContext.canScroll(e.timeStamp, WheelTarget.Div) && // can start new scroll or continue scroll
+      !e.ctrlKey && // not zooming
+      ((scrollableY && !e.deltaX) || // just scroll up/down
+        (scrollableX && !e.deltaY) || // just scroll left/right
+        (scrollableX && scrollableY)) // scroll any direction
+    ) {
+      e.stopPropagation()
+      wheelContext.startScroll(e.timeStamp, WheelTarget.Div)
+    }
   }
 
   const overflow =
@@ -23,10 +36,10 @@ const ScrollableDiv = forwardRef<HTMLDivElement, Props>(function ScrollableDiv(
     (className ? ' ' + className : '')
 
   return (
-    <div ref={ref} className={overflow} onWheelCapture={onWheelCapture}>
+    <div className={overflow} onWheelCapture={onWheelCapture}>
       {children}
     </div>
   )
-})
+}
 
 export default ScrollableDiv

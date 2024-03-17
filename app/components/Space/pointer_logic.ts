@@ -8,16 +8,16 @@ import {
 } from './pan_zoom_utils'
 
 export default class PointerLogic {
-  private getTrans: Fn.GetTrans
-  private saveView: Fn.SaveView
-  private setTranslate: Fn.SetTranslate
-  private zoomIn: Fn.ZoomIn
-  private resetView: Fn.ResetView
-  private manipView: Fn.ManipView
-  private setEase: Fn.SetEase
-  private animate: Fn.Animate
-  private viewIsReset: Fn.ViewIsReset
-  private setViewIsReset: Fn.SetViewIsReset
+  private readonly getTrans: Fn.GetTrans
+  private readonly saveView: Fn.SaveView
+  private readonly setTranslate: Fn.SetTranslate
+  private readonly zoomIn: Fn.ZoomIn
+  private readonly resetView: Fn.ResetView
+  private readonly manipView: Fn.ManipView
+  private readonly setEase: Fn.SetEase
+  private readonly animate: Fn.Animate
+  private readonly viewIsReset: Fn.ViewIsReset
+  private readonly setViewIsReset: Fn.SetViewIsReset
 
   // prettier-ignore
   constructor( getTrans: Fn.GetTrans, saveView: Fn.SaveView, setTranslate: Fn.SetTranslate, zoomIn: Fn.ZoomIn, resetView: Fn.ResetView, manipView: Fn.ManipView, setEase: Fn.SetEase, animate: Fn.Animate, viewIsReset: Fn.ViewIsReset, setViewIsReset: Fn.SetViewIsReset) {

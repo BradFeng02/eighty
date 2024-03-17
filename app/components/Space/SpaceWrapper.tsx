@@ -1,6 +1,7 @@
-import { useEffect, useRef, ReactNode, useState } from 'react'
+import { useEffect, useRef, ReactNode, useState, useContext } from 'react'
 import PanZoomController from './pan_zoom'
 import { GRID_SIZE_PX } from './constants'
+import { WheelContext } from './WheelContext'
 
 type Props = {
   wid: number
@@ -9,6 +10,7 @@ type Props = {
 }
 
 const SpaceWrapper = ({ wid, hgt, children }: Props) => {
+  const wheelContext = useContext(WheelContext)
   const container = useRef<HTMLDivElement>(null)
   const wrapper = useRef<HTMLDivElement>(null)
   const [viewIsReset, setViewIsReset] = useState(true)
@@ -17,12 +19,13 @@ const SpaceWrapper = ({ wid, hgt, children }: Props) => {
   // mount & unmount
   useEffect(() => {
     setHide(false)
-    let controller = new PanZoomController(container, wrapper, setViewIsReset)
+    // prettier-ignore
+    let controller = new PanZoomController(container, wrapper, wheelContext, setViewIsReset)
 
     return () => {
       controller.destroy()
     }
-  }, [container, wrapper])
+  }, [container, wrapper, wheelContext])
 
   return (
     <div
