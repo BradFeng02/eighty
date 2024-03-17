@@ -9,6 +9,7 @@ import TodoList from './TodoList'
 import RichLexical, {
   InitialConfigReduced,
 } from '../../RichLexical/RichLexical'
+import ScrollableDiv from '../../Space/ScrollableDiv'
 
 type Props = {
   wid: number
@@ -38,6 +39,8 @@ const TodoListBlock = (props: Props) => {
   const [showTitle, setShowTitle] = useState(true)
   const [titleFontSize, setTitleFontSize] = useState(16)
 
+  const [listScrollable, setListScrollable] = useState(false)
+
   return (
     <BlockWrapper {...props}>
       <div className="flex h-full flex-col gap-[10px]">
@@ -54,7 +57,12 @@ const TodoListBlock = (props: Props) => {
             <HistoryPlugin />
           </RichLexical>
         )}
-        <TodoList />
+        <ScrollableDiv
+          className="flex-grow border-t-2 border-white pt-[5px]"
+          scrollableY={listScrollable}
+        >
+          <TodoList setScrollable={setListScrollable} />
+        </ScrollableDiv>
       </div>
     </BlockWrapper>
   )

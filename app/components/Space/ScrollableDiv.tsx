@@ -2,7 +2,7 @@ import { ReactNode, useContext } from 'react'
 import { WheelTarget, WheelContext } from './WheelContext'
 
 type Props = {
-  children: ReactNode
+  children?: ReactNode
   className?: string
   scrollableX?: boolean
   scrollableY?: boolean
