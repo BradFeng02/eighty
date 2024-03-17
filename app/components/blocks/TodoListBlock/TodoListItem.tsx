@@ -60,7 +60,7 @@ const TodoListItem = ({ task }: Props) => {
       <div className="flex items-center gap-[5px]">
         <div className="w-[18px] min-w-[18px]">
           <input
-            className={`${Dbt.Toggle} align-middle`}
+            className={`${Dbt.Disable} align-middle`}
             type="checkbox"
             checked={checked}
             onChange={() => {

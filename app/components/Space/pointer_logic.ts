@@ -110,11 +110,6 @@ export default class PointerLogic {
     const tgtDbt = this.targetDbt(e.target)
     //// DISABLED
     if (tgtDbt === Dbt.Disable) return this._dbtHelper(e, false, false) // disable: reset and don't double tap
-    //// TOGGLE
-    else if (tgtDbt === Dbt.Toggle || this.targetDbt(this.lastTap.target) === Dbt.Toggle) {
-      if (e.target === this.lastTap.target) return this._dbtHelper(e, false, true) // same target: reset and double tap
-      else return this._dbtHelper(e, true, false) // different target: save and don't double tap
-    }
     //// NORMAL
     else return this._dbtHelper(e, false, true) // normal: reset and double tap
   }
@@ -128,7 +123,6 @@ export default class PointerLogic {
   private targetDbt = (tgt: EventTarget | null): Dbt => {
     if (tgt instanceof HTMLElement) {
       if (tgt.classList.contains(Dbt.Disable)) return Dbt.Disable
-      if (tgt.classList.contains(Dbt.Toggle)) return Dbt.Toggle
       return Dbt.Normal
     }
     return Dbt.Disable
@@ -144,7 +138,6 @@ export default class PointerLogic {
       type: e.pointerType,
       clientX: e.clientX,
       clientY: e.clientY,
-      target: e.target,
     }
   }
 
