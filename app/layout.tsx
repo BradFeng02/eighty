@@ -13,16 +13,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
-        <h1>scrollt est</h1>
-        <h1>scrollt est</h1>
-        <h1>scrollt est</h1>
-        <h1>scrollt est</h1>
-        <h1>scrollt est</h1>
-        <h1>scrollt est</h1>
-
-        <div className="ml-12 h-screen w-screen">{children}</div>
-      </body>
+      <body>{children}</body>
     </html>
   )
 }

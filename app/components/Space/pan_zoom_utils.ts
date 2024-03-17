@@ -17,7 +17,6 @@ export type PointerEvDetails = {
   type: string
   clientX: number
   clientY: number
-  target: EventTarget | null
 }
 
 export const PADDING = 10 // padding for node in space

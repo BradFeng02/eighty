@@ -1,12 +1,16 @@
 import { Point2, clamp } from '@/app/utils'
 import { Ease, Fn } from './pan_zoom_utils'
+import { WheelTarget, WheelContextObject } from './WheelContext'
 
 export default class WheelLogic {
-  private pan: Fn.Pan
-  private zoomTo: Fn.ZoomTo
-  private setEase: Fn.SetEase
+  private readonly wheelContext: WheelContextObject
+  private readonly pan: Fn.Pan
+  private readonly zoomTo: Fn.ZoomTo
+  private readonly setEase: Fn.SetEase
 
-  constructor(pan: Fn.Pan, zoomTo: Fn.ZoomTo, setEase: Fn.SetEase) {
+  // prettier-ignore
+  constructor(wheelContext: WheelContextObject, pan: Fn.Pan, zoomTo: Fn.ZoomTo, setEase: Fn.SetEase) {
+    this.wheelContext = wheelContext
     this.pan = pan
     this.zoomTo = zoomTo
     this.setEase = setEase
@@ -16,7 +20,6 @@ export default class WheelLogic {
     // nothing
   }
 
-  private lastWheelTime: number = -1000
   private lastMag = new Point2(-1, -1)
   private wheelMagX = 0.11111111111
   private wheelMagY = 0.11111111111
@@ -25,12 +28,16 @@ export default class WheelLogic {
    * @returns true if view changed
    */
   readonly wheel = (e: WheelEvent) => {
+    const elapsed = this.wheelContext.elapsed(e.timeStamp)
+
+    if (this.wheelContext.canScroll(e.timeStamp, WheelTarget.Space))
+      this.wheelContext.startScroll(e.timeStamp, WheelTarget.Space)
+    else return false
+
     const dx_px = normalizeWheelDelta(e.deltaX, e.deltaMode)
     const dy_px = normalizeWheelDelta(e.deltaY, e.deltaMode)
     const magX = Math.abs(dx_px)
     const magY = Math.abs(dy_px)
-    const elapsed = e.timeStamp - this.lastWheelTime
-    this.lastWheelTime = e.timeStamp
 
     const dx = this.lastMag.x === -1 ? 0 : dx_px // first ever scroll, ignore
     const dy = this.lastMag.y === -1 ? 0 : dy_px // first ever scroll, ignore

@@ -8,16 +8,16 @@ import {
 } from './pan_zoom_utils'
 
 export default class PointerLogic {
-  private getTrans: Fn.GetTrans
-  private saveView: Fn.SaveView
-  private setTranslate: Fn.SetTranslate
-  private zoomIn: Fn.ZoomIn
-  private resetView: Fn.ResetView
-  private manipView: Fn.ManipView
-  private setEase: Fn.SetEase
-  private animate: Fn.Animate
-  private viewIsReset: Fn.ViewIsReset
-  private setViewIsReset: Fn.SetViewIsReset
+  private readonly getTrans: Fn.GetTrans
+  private readonly saveView: Fn.SaveView
+  private readonly setTranslate: Fn.SetTranslate
+  private readonly zoomIn: Fn.ZoomIn
+  private readonly resetView: Fn.ResetView
+  private readonly manipView: Fn.ManipView
+  private readonly setEase: Fn.SetEase
+  private readonly animate: Fn.Animate
+  private readonly viewIsReset: Fn.ViewIsReset
+  private readonly setViewIsReset: Fn.SetViewIsReset
 
   // prettier-ignore
   constructor( getTrans: Fn.GetTrans, saveView: Fn.SaveView, setTranslate: Fn.SetTranslate, zoomIn: Fn.ZoomIn, resetView: Fn.ResetView, manipView: Fn.ManipView, setEase: Fn.SetEase, animate: Fn.Animate, viewIsReset: Fn.ViewIsReset, setViewIsReset: Fn.SetViewIsReset) {
@@ -110,11 +110,6 @@ export default class PointerLogic {
     const tgtDbt = this.targetDbt(e.target)
     //// DISABLED
     if (tgtDbt === Dbt.Disable) return this._dbtHelper(e, false, false) // disable: reset and don't double tap
-    //// TOGGLE
-    else if (tgtDbt === Dbt.Toggle || this.targetDbt(this.lastTap.target) === Dbt.Toggle) {
-      if (e.target === this.lastTap.target) return this._dbtHelper(e, false, true) // same target: reset and double tap
-      else return this._dbtHelper(e, true, false) // different target: save and don't double tap
-    }
     //// NORMAL
     else return this._dbtHelper(e, false, true) // normal: reset and double tap
   }
@@ -128,7 +123,6 @@ export default class PointerLogic {
   private targetDbt = (tgt: EventTarget | null): Dbt => {
     if (tgt instanceof HTMLElement) {
       if (tgt.classList.contains(Dbt.Disable)) return Dbt.Disable
-      if (tgt.classList.contains(Dbt.Toggle)) return Dbt.Toggle
       return Dbt.Normal
     }
     return Dbt.Disable
@@ -144,7 +138,6 @@ export default class PointerLogic {
       type: e.pointerType,
       clientX: e.clientX,
       clientY: e.clientY,
-      target: e.target,
     }
   }
 
@@ -159,12 +152,7 @@ export default class PointerLogic {
   }
 
   private penDragStop = (e: PointerEvent) => {
-    if (e.type === 'pointercancel') {
-      this.setEase(Ease.None)
-      this.setTranslate(this.from.x, this.from.y)
-      if (this.wasReset) this.setViewIsReset(true)
-      this.animate()
-    }
+    if (e.type === 'pointercancel') this.cancelMove()
     return true
   }
 
@@ -230,12 +218,7 @@ export default class PointerLogic {
   }
 
   private touchManipStop = (e: PointerEvent) => {
-    if (this.cancelable && e.type === 'pointercancel') {
-      this.setEase(Ease.None)
-      this.setTranslate(this.from.x, this.from.y)
-      if (this.wasReset) this.setViewIsReset(true)
-      this.animate()
-    }
+    if (this.cancelable && e.type === 'pointercancel') this.cancelMove()
     // drop second finger
     if (e.pointerId === this.touch2) {
       this.touch2 = null
@@ -284,6 +267,14 @@ export default class PointerLogic {
   }
 
   ///// utils
+
+  private cancelMove = () => {
+    this.cancelDoubleTap()
+    this.setEase(Ease.None)
+    this.setTranslate(this.from.x, this.from.y)
+    if (this.wasReset) this.setViewIsReset(true)
+    this.animate()
+  }
 
   private inDeadzone(x: number, y: number) {
     const dx = this.start.x - x
