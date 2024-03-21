@@ -1,7 +1,14 @@
-import { useEffect, useRef, ReactNode, useState, useContext } from 'react'
+import React, {
+  useEffect,
+  useRef,
+  ReactNode,
+  useState,
+  useContext,
+} from 'react'
 import PanZoomController from './pan_zoom'
 import { GRID_SIZE_PX } from './constants'
 import { WheelContext } from './WheelContext'
+import { CommandBarContext } from '../CommandBar/CommandBarContext'
 
 type Props = {
   wid: number
@@ -10,6 +17,7 @@ type Props = {
 }
 
 const SpaceWrapper = ({ wid, hgt, children }: Props) => {
+  const toolbar = useContext(CommandBarContext)
   const wheelContext = useContext(WheelContext)
   const container = useRef<HTMLDivElement>(null)
   const wrapper = useRef<HTMLDivElement>(null)
@@ -27,13 +35,18 @@ const SpaceWrapper = ({ wid, hgt, children }: Props) => {
     }
   }, [container, wrapper, wheelContext])
 
+  const onClickClearToolbar = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) toolbar.clear()
+  }
+
   return (
     <div
       className="h-full w-full touch-none select-none overflow-clip"
       ref={container}
+      onClick={onClickClearToolbar}
     >
       <div
-        className="relative touch-none overflow-visible"
+        className="pointer-events-none relative touch-none overflow-visible"
         style={{
           width: wid * GRID_SIZE_PX,
           height: hgt * GRID_SIZE_PX,
