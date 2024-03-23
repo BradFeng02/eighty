@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import BlockWrapper from '../BlockWrapper'
-import { itemList, useCommandBar } from '../../CommandBar/CommandBarContext'
+import {
+  commandBarItems,
+  useCommandBar,
+} from '../../CommandBar/CommandBarContext'
 
 type Props = {
   wid: number
@@ -12,13 +15,12 @@ type Props = {
 }
 
 const TestBlock = (props: Props) => {
-  const [bindItems, updateItems] = useCommandBar(111)
   const [test, setTest] = useState('value!')
   const [blah, setBlah] = useState(0)
 
   const commands = useMemo(
     () =>
-      itemList(
+      commandBarItems(
         <p>{test.length}</p>,
         <button onClick={() => setTest((v) => v + '!!')}>
           test button: {test}
@@ -26,16 +28,13 @@ const TestBlock = (props: Props) => {
       ),
     [test]
   )
-
-  useEffect(() => {
-    updateItems(commands)
-  }, [updateItems, commands])
+  const bindToolbar = useCommandBar(111, commands)
 
   return (
     <BlockWrapper {...props}>
       <p
         onClick={() => {
-          bindItems(commands)
+          bindToolbar()
           // setBlah(blah + 1)
         }}
       >

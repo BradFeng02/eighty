@@ -68,30 +68,33 @@ export const CommandBarContext = createContext(new CommandBarObject())
 
 type ItemsFn = (items: ReactNode[]) => void
 
-// workaround to array definition needing key prop
-export const itemList = (...items: ReactNode[]) => items
+/**
+ * workaround to array definition needing key prop
+ * @param items elements to show in command bar
+ * @returns arguments as a list of elements
+ */
+export const commandBarItems = (...items: ReactNode[]) => items
 
 /**
+ * provide a function to expose items in the command bar
  * @param id unique id of the component
+ * @param items items to show in the command bar (useMemo)
+ * @returns function to bind command bar and expose items
  */
-export const useCommandBar = (id: number): [ItemsFn, ItemsFn] => {
+export const useCommandBar = (id: number, items: ReactNode[]) => {
   const toolbar = useContext(CommandBarContext)
   const [active, setActive] = useState(false)
-  /**
-   * expose arguments as items in the command bar
-   * @param items new items to show in the command bar (buttons, etc.)
-   */
-  const bindItems = (items: ReactNode[]) => {
+
+  // bind (first time)
+  const bind = () => {
     setActive(true)
     toolbar.bind(id, () => setActive(false), items)
   }
-  /**
-   * update items in the command bar
-   * @param items updated items to show in the command bar (buttons, etc.)
-   */
-  const updateItems = (items: ReactNode[]) => {
+
+  // update (state change)
+  useEffect(() => {
     if (active) toolbar.updateItems(id, items)
-  }
+  }, [active, id, toolbar, items])
 
   ///// clear items when unmounting
   // track ref of command bar obj and id
@@ -109,5 +112,5 @@ export const useCommandBar = (id: number): [ItemsFn, ItemsFn] => {
     }
   }, [])
 
-  return [bindItems, updateItems]
+  return bind
 }
