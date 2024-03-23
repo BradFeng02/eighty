@@ -22,19 +22,19 @@ export class CommandBarObject {
 
   ///// component functions
 
-  private active?: string
+  private active?: number
   private unbind: () => void = () => {}
 
   /**
    * expose items in the command bar
-   * @param name name of the component
+   * @param id unique id of the component
    * @param unbind function called when control is lost
    * @param items items to show in the command bar (buttons, etc.)
    */
-  readonly bind = (name: string, unbind: () => void, items: ReactNode[]) => {
-    if (name !== this.active) {
+  readonly bind = (id: number, unbind: () => void, items: ReactNode[]) => {
+    if (id !== this.active) {
       this.unbind()
-      this.active = name
+      this.active = id
       this.unbind = unbind
     }
     this.update(items)
@@ -42,13 +42,10 @@ export class CommandBarObject {
 
   /**
    * unbind items from the command bar
-   * @param name name of the component. Leave empty to clear any.
+   * @param id unique id of the component. Leave empty to clear any.
    */
-  readonly clear = (name?: string) => {
-    if (
-      this.active !== undefined &&
-      (name === undefined || name === this.active)
-    ) {
+  readonly clear = (id?: number) => {
+    if (this.active !== undefined && (id === undefined || id === this.active)) {
       this.unbind()
       this.active = undefined
       this.unbind = () => {}
@@ -58,12 +55,12 @@ export class CommandBarObject {
 
   /**
    * update items in the command bar
-   * @param name name of the component
+   * @param id unique id of the component
    * @param items items to show in the command bar (buttons, etc.)
    */
-  readonly updateItems = (name: string, items: ReactNode[]) => {
-    if (name === this.active) this.update(items)
-    else console.warn('command bar (update): name was not active')
+  readonly updateItems = (id: number, items: ReactNode[]) => {
+    if (id === this.active) this.update(items)
+    else console.warn('command bar (update): id was not active')
   }
 }
 
@@ -75,9 +72,9 @@ type ItemsFn = (items: ReactNode[]) => void
 export const itemList = (...items: ReactNode[]) => items
 
 /**
- * @param name name of the component
+ * @param id unique id of the component
  */
-export const useCommandBar = (name: string): [ItemsFn, ItemsFn] => {
+export const useCommandBar = (id: number): [ItemsFn, ItemsFn] => {
   const toolbar = useContext(CommandBarContext)
   const [active, setActive] = useState(false)
   /**
@@ -86,29 +83,29 @@ export const useCommandBar = (name: string): [ItemsFn, ItemsFn] => {
    */
   const bindItems = (items: ReactNode[]) => {
     setActive(true)
-    toolbar.bind(name, () => setActive(false), items)
+    toolbar.bind(id, () => setActive(false), items)
   }
   /**
    * update items in the command bar
    * @param items updated items to show in the command bar (buttons, etc.)
    */
   const updateItems = (items: ReactNode[]) => {
-    if (active) toolbar.updateItems(name, items)
+    if (active) toolbar.updateItems(id, items)
   }
 
   ///// clear items when unmounting
-  // track ref of command bar obj and name
-  const ref = useRef<[CommandBarObject, string]>()
+  // track ref of command bar obj and id
+  const ref = useRef<[CommandBarObject, number]>()
   // update ref
   useEffect(() => {
-    ref.current = [toolbar, name]
-  }, [toolbar, name])
+    ref.current = [toolbar, id]
+  }, [toolbar, id])
   // clear toolbar on unmount
   useEffect(() => {
     return () => {
       if (ref.current === undefined) return
-      const [_toolbar, _name] = ref.current
-      _toolbar.clear(_name)
+      const [_toolbar, _id] = ref.current
+      _toolbar.clear(_id)
     }
   }, [])
 

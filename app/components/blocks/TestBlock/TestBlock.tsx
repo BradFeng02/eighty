@@ -12,7 +12,7 @@ type Props = {
 }
 
 const TestBlock = (props: Props) => {
-  const [bindItems, updateItems] = useCommandBar('TestBlock')
+  const [bindItems, updateItems] = useCommandBar(111)
   const [test, setTest] = useState('value!')
   const [blah, setBlah] = useState(0)
 
