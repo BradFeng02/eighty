@@ -77,7 +77,7 @@ const dynamicEaseOut = (
 }
 
 // slow ease out, with delay at start to allow click event
-const DELAY = 150
+const DELAY = 75 // 150 // less delay because we got rid of dbt-toggle
 const slowEaseOut = (
   elapsed: number,
   dx: number,

@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import SpaceContent from './SpaceContent'
 import SpaceWrapper from './SpaceWrapper'
 import { WheelContext, WheelContextObject } from './WheelContext'
@@ -10,9 +11,9 @@ const testSpace = {
 }
 
 const Space = () => {
+  const wheelContext = useMemo(() => new WheelContextObject(), [])
   return (
-    // shouldn't rerender...
-    <WheelContext.Provider value={new WheelContextObject()}>
+    <WheelContext.Provider value={wheelContext}>
       <SpaceWrapper wid={testSpace.wid} hgt={testSpace.hgt}>
         <SpaceContent></SpaceContent>
       </SpaceWrapper>

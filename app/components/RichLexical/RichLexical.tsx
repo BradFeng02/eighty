@@ -26,10 +26,6 @@ import {
 import { CSSProperties, ReactNode, useEffect, useRef, useState } from 'react'
 import styles from './RichLexical.module.css'
 
-interface VarStyle extends CSSProperties {
-  '--placeholder-text': string
-}
-
 export type InitialConfigReduced = {
   nodes?: ReadonlyArray<Klass<LexicalNode> | LexicalNodeReplacement>
   onError?: (error: Error, editor: LexicalEditor) => void

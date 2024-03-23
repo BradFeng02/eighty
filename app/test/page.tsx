@@ -1,13 +1,10 @@
-import Space from '../components/Space/Space'
-import styles from './test.module.css'
+import EightyEditor from '../components/EightyEditor/EightyEditor'
 
 const testpage = () => {
   return (
-    <>
-      <main className={`h-screen w-screen border-8 border-solid border-black`}>
-        <Space></Space>
-      </main>
-    </>
+    <main className="h-screen w-screen">
+      <EightyEditor></EightyEditor>
+    </main>
   )
 }
 
