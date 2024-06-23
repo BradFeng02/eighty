@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useEffect, useState } from 'react'
+import { MouseEventHandler, ReactNode, useEffect, useState } from 'react'
 import { BLOCK_PADDING, GRID_SIZE_PX } from '../Space/constants'
 
 type Props = {
@@ -8,10 +8,11 @@ type Props = {
   hgt: number
   left: number
   top: number
+  onClick?: MouseEventHandler<HTMLDivElement>
   children: ReactNode
 }
 
-const BlockWrapper = ({ wid, hgt, left, top, children }: Props) => {
+const BlockWrapper = ({ wid, hgt, left, top, onClick, children }: Props) => {
   const [color, setColor] = useState('#FFFFFF')
 
   useEffect(() => {
@@ -31,6 +32,7 @@ const BlockWrapper = ({ wid, hgt, left, top, children }: Props) => {
         backgroundColor: color,
         padding: BLOCK_PADDING,
       }}
+      onClick={onClick}
     >
       {children}
     </div>

@@ -2,8 +2,12 @@
 
 import React, {
   Dispatch,
+  MutableRefObject,
   SetStateAction,
+  memo,
+  useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react'
@@ -39,9 +43,10 @@ const initConfig: InitialConfigReduced = { theme }
 
 type Props = {
   setScrollable: Dispatch<SetStateAction<boolean>>
+  submitRef: MutableRefObject<(() => void) | undefined>
 }
 
-const TodoList = ({ setScrollable }: Props) => {
+const TodoList = memo(function TodoList({ setScrollable, submitRef }: Props) {
   const listRef = useRef<HTMLOListElement>(null)
   const inputRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<LexicalEditor>(null)
@@ -102,6 +107,11 @@ const TodoList = ({ setScrollable }: Props) => {
     }
   }, [listRef, inputRef, setScrollable])
 
+  const submit = useCallback(() => {
+    editorRef.current?.dispatchCommand(INSERT_PARAGRAPH_COMMAND, undefined)
+  }, [])
+  submitRef.current = submit
+
   return (
     <>
       <ol ref={listRef}>
@@ -113,12 +123,7 @@ const TodoList = ({ setScrollable }: Props) => {
         <div
           className="w-[18px] min-w-[18px] select-none"
           style={{ opacity: empty ? 0.35 : 1 }}
-          onClick={() => {
-            editorRef.current?.dispatchCommand(
-              INSERT_PARAGRAPH_COMMAND,
-              undefined
-            )
-          }}
+          onClick={() => submit()}
         >
           <div className="h-[15px] w-[15px] text-black">{PlusIcon}</div>
         </div>
@@ -140,6 +145,6 @@ const TodoList = ({ setScrollable }: Props) => {
       </div>
     </>
   )
-}
+})
 
 export default TodoList

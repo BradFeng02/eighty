@@ -35,15 +35,16 @@ const SpaceWrapper = ({ wid, hgt, children }: Props) => {
     }
   }, [container, wrapper, wheelContext])
 
-  const onClickClearToolbar = (e: React.MouseEvent) => {
+  const editorRootClickHandler = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) toolbar.clear()
+    else toolbar.completeBind()
   }
 
   return (
     <div
       className="h-full w-full touch-none select-none overflow-clip"
       ref={container}
-      onClick={onClickClearToolbar}
+      onClick={editorRootClickHandler}
     >
       <div
         className="pointer-events-none relative touch-none overflow-visible"

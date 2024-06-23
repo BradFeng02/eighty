@@ -28,10 +28,20 @@ const TestBlock = (props: Props) => {
       ),
     [test]
   )
-  const bindToolbar = useCommandBar(111, commands)
+  const bindToolbar = useCommandBar(commands)
+
+  const outercommnds = useMemo(
+    () =>
+      commandBarItems(
+        <p>block lvl!</p>,
+        <button onClick={() => setTest('value!')}>reset: {test.length}</button>
+      ),
+    [test]
+  )
+  const bindoutertb = useCommandBar(outercommnds)
 
   return (
-    <BlockWrapper {...props}>
+    <BlockWrapper {...props} onClick={bindoutertb}>
       <p
         onClick={() => {
           bindToolbar()

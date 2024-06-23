@@ -10,57 +10,101 @@ import {
 export class CommandBarObject {
   constructor() {}
 
-  private update: (items: ReactNode[]) => void = () =>
+  private updateFn: (items: ReactNode[][]) => void = () =>
     console.error('no update function set for command bar context')
   /**
-   * (must call in command bar)
+   * (Must call in command bar.)
    * @param update called with updated items
    */
-  readonly setUpdate = (update: (items: ReactNode[]) => void) => {
-    this.update = update
+  readonly setUpdate = (update: (items: ReactNode[][]) => void) => {
+    this.updateFn = update
   }
 
-  ///// component functions
+  private readonly itemsArray: Array<ReactNode[]> = new Array<ReactNode[]>()
+  /**
+   * Update the command bar with updated items.
+   */
+  private readonly update = () => {
+    this.updateFn(this.itemsArray)
+  }
 
-  private active?: number
-  private unbind: () => void = () => {}
+  // Binding (click event propagation) complete.
+  private complete: boolean = true
+  // Incrementing ID for each time binding.
+  private id: number = 0
+  /**
+   * Complete binding, updating the command bar.
+   * (Must be called in a click event handler for editor root!)
+   */
+  readonly completeBind = () => {
+    this.complete = true
+    this.update()
+  }
+  /**
+   * Start binding.
+   */
+  readonly startBind = () => {
+    this.complete = false
+    this.id += 1
+    this.clearAll()
+  }
+
+  private readonly unbindFns: Array<() => void> = new Array<() => void>()
+  private readonly unbindAll = () => {
+    this.unbindFns.forEach((fn) => fn())
+    this.unbindFns.length = 0 // clear
+  }
 
   /**
-   * expose items in the command bar
-   * @param id unique id of the component
+   * Unbind and clear all items.
+   * Does *not* update the command bar.
+   */
+  private readonly clearAll = () => {
+    this.unbindAll()
+    this.itemsArray.length = 0 // clear
+  }
+
+  ///// functions /////
+
+  /**
+   * Expose items in the command bar.
    * @param unbind function called when control is lost
    * @param items items to show in the command bar (buttons, etc.)
+   * @returns [bind ID, toolbar level]
    */
-  readonly bind = (id: number, unbind: () => void, items: ReactNode[]) => {
-    if (id !== this.active) {
-      this.unbind()
-      this.active = id
-      this.unbind = unbind
-    }
-    this.update(items)
-  }
-
-  /**
-   * unbind items from the command bar
-   * @param id unique id of the component. Leave empty to clear any.
-   */
-  readonly clear = (id?: number) => {
-    if (this.active !== undefined && (id === undefined || id === this.active)) {
-      this.unbind()
-      this.active = undefined
-      this.unbind = () => {}
-      this.update([])
-    }
+  readonly bind = (
+    unbind: () => void,
+    items: ReactNode[]
+  ): [number, number] => {
+    if (this.complete) this.startBind()
+    this.unbindFns.push(unbind) // append
+    const level = this.itemsArray.unshift(items) // prepend
+    return [this.id, level] // level is 1 for inner-most commands
   }
 
   /**
    * update items in the command bar
-   * @param id unique id of the component
+   * @param id bind ID
+   * @param level toolbar level
    * @param items items to show in the command bar (buttons, etc.)
    */
-  readonly updateItems = (id: number, items: ReactNode[]) => {
-    if (id === this.active) this.update(items)
-    else console.warn('command bar (update): id was not active')
+  readonly updateItems = (id: number, level: number, items: ReactNode[]) => {
+    if (id === this.id) {
+      this.itemsArray[this.itemsArray.length - level] = items
+      this.update()
+    } else console.warn('command bar (update items): id was not active')
+  }
+
+  /**
+   * Unbind and clear all items from the command bar.
+   * @param id bind ID
+   */
+  readonly clear = (id?: number) => {
+    if (id === undefined || id === this.id) {
+      this.clearAll()
+      this.completeBind() // just in case complete should be set?
+      this.id += 1
+    }
   }
 }
 
@@ -81,20 +125,27 @@ export const commandBarItems = (...items: ReactNode[]) => items
  * @param items items to show in the command bar (useMemo)
  * @returns function to bind command bar and expose items
  */
-export const useCommandBar = (id: number, items: ReactNode[]) => {
+export const useCommandBar = (items: ReactNode[]) => {
   const toolbar = useContext(CommandBarContext)
   const [active, setActive] = useState(false)
+  const [id, setId] = useState(-1)
+  const [level, setLevel] = useState(0)
+  const [update, setUpdate] = useState(true) // should update
 
   // bind (first time)
   const bind = () => {
+    const [_id, _level] = toolbar.bind(() => setActive(false), items)
     setActive(true)
-    toolbar.bind(id, () => setActive(false), items)
+    setId(_id)
+    setLevel(_level)
+    setUpdate(false)
   }
 
   // update (state change)
   useEffect(() => {
-    if (active) toolbar.updateItems(id, items)
-  }, [active, id, toolbar, items])
+    if (active && update) toolbar.updateItems(id, level, items)
+    setUpdate(true)
+  }, [active, id, level, toolbar, items, update])
 
   ///// clear items when unmounting
   // track ref of command bar obj and id

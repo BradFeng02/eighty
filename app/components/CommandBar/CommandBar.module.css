@@ -1,0 +1,6 @@
+.eighty-tb-sep {
+    display: inline-block;
+    user-select: none;
+    width: 0;
+    border-left: 1px solid gray;
+}
